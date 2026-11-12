@@ -17,8 +17,8 @@
    están hechas para usarse en el navegador. La seguridad la dan el inicio
    de sesión y las reglas RLS de la base de datos (supabase_setup.sql).
    NUNCA pongas aquí la clave secreta (sb_secret_... o "service_role"). */
-const SUPABASE_URL="https://abcdefgh.supabase.co";
-const SUPABASE_ANON_KEY="sb_publishable_INORDER2026";
+const SUPABASE_URL="https://pkqnondrjqvesgnghvbh.supabase.co";
+const SUPABASE_ANON_KEY="AQUÍ-PEGAS-TU-PUBLISHABLE-KEY";
 const APP_VERSION="1.0.0";
 
 /* ---------- 2. Utilidades generales ---------- */
