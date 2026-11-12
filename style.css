@@ -1,9 +1,10 @@
 /* =====================================================================
-   EXPORTADOR PLAME WEB · style.css
+   INORDER - EQUIPO CONTABLE · Exportador PLAME · style.css
    Estructura: tokens de color → base → inicio de sesión → armazón de la
    aplicación (barra lateral + contenido) → componentes compartidos →
    módulo exportador (heredado del artefacto) → panel, empresas,
-   historial y configuración → ventanas modales → adaptación móvil.
+   historial y configuración → ventanas modales → marca INORDER →
+   colores por empresa y códigos PDT PLAME → adaptación móvil.
    ===================================================================== */
 
 /* ---------- 1. Tokens ---------- */
@@ -74,8 +75,9 @@ a{color:var(--accent)}
 .app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh;background:linear-gradient(to right,var(--side) 232px,transparent 232px)}
 .sidebar{background:var(--side);color:var(--side-fg);display:flex;flex-direction:column;gap:20px;padding:20px 14px;position:sticky;top:0;height:100vh}
 .side-brand{display:flex;align-items:center;gap:10px;padding:0 6px}
-.side-brand .logo{flex:none;width:34px;height:34px;border-radius:7px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-family:var(--mono);font-weight:500;font-size:.78rem}
-:root:not([data-theme="dark"]) .side-brand .logo{background:#5fb8ad;color:#06201d}
+.side-brand .logo{flex:none;width:36px;height:36px;border-radius:9px;display:grid;place-items:center;font-weight:700;font-size:.9rem;letter-spacing:.03em;color:#fff;
+  background:linear-gradient(140deg,#6cc7bb 0%,#1f7f75 55%,#0f5c56 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+.side-brand b{letter-spacing:.06em}
 .side-brand b{display:block;font-size:.95rem}
 .side-brand span{display:block;font-size:.72rem;color:var(--side-muted)}
 .menu-toggle{display:none}
@@ -236,7 +238,54 @@ dialog form{display:flex;flex-direction:column;max-height:calc(100vh - 34px)}
 .kv dt{color:var(--muted)}
 .kv dd{margin:0;word-break:break-all}
 
-/* ---------- 10. Adaptación a tablets y celulares ---------- */
+/* ---------- 10. Marca INORDER - EQUIPO CONTABLE ---------- */
+.login-brand{background:radial-gradient(900px 480px at -10% -10%,rgba(95,184,173,.20),transparent 60%),radial-gradient(700px 420px at 110% 110%,rgba(95,184,173,.10),transparent 60%),var(--side)}
+.brand-lockup{display:flex;align-items:center;gap:18px}
+.brand-mark{flex:none;position:relative;overflow:hidden;width:66px;height:66px;border-radius:15px;display:grid;place-items:center;
+  background:linear-gradient(140deg,#6cc7bb 0%,#1f7f75 55%,#0f5c56 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),0 12px 30px rgba(0,0,0,.28)}
+.brand-mark::after{content:"";position:absolute;left:-40%;right:-40%;bottom:-62%;height:80%;background:rgba(255,255,255,.13);transform:rotate(-14deg)}
+.brand-mark span{position:relative;z-index:1;color:#fff;font-weight:700;font-size:1.5rem;letter-spacing:.03em}
+.brand-mark.sm{width:42px;height:42px;border-radius:11px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),0 4px 12px rgba(15,92,86,.25)}
+.brand-mark.sm span{font-size:1rem}
+.brand-name{font-size:clamp(2.3rem,4.8vw,3.7rem);font-weight:700;letter-spacing:.09em;line-height:1;color:#f2f7f6}
+.brand-team{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:clamp(.78rem,1.25vw,.98rem);font-weight:600;letter-spacing:.34em;color:#8fd1c7}
+.brand-team .rule{flex:none;width:30px;height:2px;border-radius:2px;background:#5fb8ad}
+.login-brand .brand-pitch h1{font-size:clamp(1.25rem,2.2vw,1.65rem);margin-top:6px}
+.form-brand{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.brand-line{font-size:1.02rem;font-weight:700;letter-spacing:.07em;color:var(--fg);line-height:1.25}
+
+/* ---------- 11. Colores por empresa ---------- */
+.dot{display:inline-block;flex:none;width:10px;height:10px;margin-top:4px;border-radius:50%;background:var(--c,var(--muted));
+  box-shadow:0 0 0 2px var(--surface),0 0 0 3px color-mix(in srgb,var(--c,var(--muted)) 45%,transparent)}
+.dot.lg{width:15px;height:15px;margin:0}
+.emp-cell{display:flex;gap:9px;align-items:flex-start;min-width:0}
+tr.emp-row td:first-child{box-shadow:inset 3px 0 0 var(--c)}
+tr.inactivo td{opacity:.62}
+.emp-title{display:flex;align-items:center;gap:10px}
+#sec-exportar .page-head{border-bottom-color:var(--emp-color,var(--fg))}
+#sec-exportar .loadbar{border-top:3px solid var(--emp-color,var(--line))}
+.emp-badge{display:inline-block;max-width:100%;padding:4px 12px;border-radius:999px;background:var(--c);color:var(--t);font-weight:600;font-size:.82rem;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.color-field{gap:6px}
+.color-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+input[type=color]{width:46px;height:34px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:pointer}
+.swatches{display:flex;flex-wrap:wrap;gap:6px}
+.swatch{width:24px;height:24px;padding:0;border:0;border-radius:6px;background:var(--c);cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+.swatch[aria-pressed="true"]{outline:2px solid var(--fg);outline-offset:2px}
+.color-preview{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.chart .seg{stroke:var(--surface);stroke-width:.7}
+.chart .sel-col{fill:var(--accent-soft)}
+.chart text.cur{fill:var(--fg);font-weight:600}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .dot{margin-top:0}
+.banner{margin:16px max(16px,calc((100% - 1208px)/2)) 0}
+.has-tip{text-decoration:underline dotted;cursor:help}
+
+/* ---------- 12. Códigos PDT PLAME ---------- */
+.cod-help .panel{padding:14px;display:flex;flex-direction:column;gap:8px}
+details.catalogo summary{padding:12px 14px;cursor:pointer;list-style-position:inside}
+details.catalogo[open] summary{border-bottom:1px solid var(--line);margin-bottom:6px}
+
+/* ---------- 13. Adaptación a tablets y celulares ---------- */
 @media (max-width:1100px){
   .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
   .kpis>div:nth-child(4){border-left:0}
@@ -252,7 +301,9 @@ dialog form{display:flex;flex-direction:column;max-height:calc(100vh - 34px)}
   .side-foot{margin-top:0}
   .login{grid-template-columns:1fr}
   .login-brand{padding:28px 20px;gap:18px}
-  .login-brand ul{display:none}
+  .login-brand ul,.login-brand .brand-pitch p{display:none}
+  .brand-mark{width:52px;height:52px;border-radius:12px}
+  .brand-mark span{font-size:1.2rem}
 }
 @media (max-width:760px){
   .loadbar{grid-template-columns:1fr}

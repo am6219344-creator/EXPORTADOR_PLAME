@@ -1,11 +1,12 @@
 /* =====================================================================
-   EXPORTADOR PLAME WEB · script.js
+   INORDER - EQUIPO CONTABLE · Exportador PLAME · script.js
    1. Configuración de la conexión (lo completa el cuaderno de Colab)
    2. Utilidades generales
    3. Capa de datos (Supabase)
    4. Guardado automático de correcciones y configuración
    5. Motor del exportador PLAME (lógica original del artefacto)
-   6. Panel principal · 7. Empresas · 8. Historial · 9. Configuración
+   6. Panel principal · 7. Empresas (con color) · 8. Historial
+   8b. Códigos PDT PLAME por empresa · 9. Configuración
    10. Sesión, navegación e inicio
    ===================================================================== */
 (function(){
@@ -19,7 +20,7 @@
    NUNCA pongas aquí la clave secreta (sb_secret_... o "service_role"). */
 const SUPABASE_URL="https://pkqnondrjqvesgnghvbh.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_ourAFgoDG3Z8U96ms-fTGg_AL0Zx4U2";
-const APP_VERSION="1.0.0";
+const APP_VERSION="2.0.0";
 
 /* ---------- 2. Utilidades generales ---------- */
 const MESES_UI=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Setiembre","Octubre","Noviembre","Diciembre"];
@@ -57,6 +58,15 @@ function mensajeError(err){
   return m||"Ocurrió un error inesperado.";
 }
 
+/* Colores por empresa: el color guardado en la tabla «empresas»; si aún no
+   tiene uno, se usa un color fijo calculado a partir del RUC. */
+const PALETA=["#0f766e","#2563eb","#7c3aed","#db2777","#ea580c","#ca8a04","#16a34a","#0891b2","#9333ea","#dc2626","#4f46e5","#65a30d","#c2410c","#0d9488","#be185d","#1d4ed8"];
+const esColor=c=>/^#[0-9a-f]{6}$/i.test(String(c||""));
+function colorDe(e){if(e&&esColor(e.color))return e.color.toLowerCase();let h=0;for(const ch of String(e&&e.ruc||""))h=(h*31+ch.charCodeAt(0))>>>0;return PALETA[h%PALETA.length]}
+const colorRuc=ruc=>colorDe(DB.empresas.find(e=>e.ruc===ruc)||{ruc});
+function textoSobre(hex){const n=parseInt(String(hex).slice(1),16),r=n>>16&255,g=n>>8&255,b=n&255;return (0.299*r+0.587*g+0.114*b)>160?"#10201d":"#ffffff"}
+const punto=(c,t)=>`<span class="dot" style="--c:${c}"${t?` title="${escH(t)}"`:""}></span>`;
+
 /* ---------- 3. Capa de datos (Supabase) ---------- */
 const configurado=/^https:\/\//.test(SUPABASE_URL)&&!SUPABASE_URL.includes("__")&&SUPABASE_ANON_KEY.length>20&&!SUPABASE_ANON_KEY.includes("__");
 let sb=null;
@@ -69,11 +79,11 @@ async function traerTodo(tabla,cols,orden){
   return out;
 }
 const empDeFila=r=>{const lv=r.jornada_lv==null?null:+r.jornada_lv,sab=r.jornada_sab==null?null:+r.jornada_sab;
-  return {ruc:r.ruc,nombre:r.nombre,alias:r.alias||"",lv,sab,porDefinir:lv==null,base31:!!r.base31,reglaBrutoVac:!!r.regla_bruto_vac,activa:r.activa!==false,actualizado:r.actualizado_en}};
-const filaDeEmp=e=>({ruc:e.ruc,nombre:e.nombre,alias:e.alias||"",jornada_lv:e.lv,jornada_sab:e.sab,base31:!!e.base31,regla_bruto_vac:!!e.reglaBrutoVac,activa:e.activa!==false});
+  return {ruc:r.ruc,nombre:r.nombre,alias:r.alias||"",lv,sab,porDefinir:lv==null,base31:!!r.base31,reglaBrutoVac:!!r.regla_bruto_vac,activa:r.activa!==false,color:esColor(r.color)?r.color.toLowerCase():null,actualizado:r.actualizado_en}};
+const filaDeEmp=e=>({ruc:e.ruc,nombre:e.nombre,alias:e.alias||"",jornada_lv:e.lv,jornada_sab:e.sab,base31:!!e.base31,regla_bruto_vac:!!e.reglaBrutoVac,activa:e.activa!==false,...(DB.v2?{color:esColor(e.color)?e.color.toLowerCase():null}:{})});
 
 /* Datos en memoria compartidos por todas las secciones */
-const DB={empresas:[],exportaciones:[],user:null};
+const DB={empresas:[],exportaciones:[],codigos:[],user:null,v2:false};
 let ENGINE=null;
 
 /* ---------- 4. Guardado automático ----------
@@ -132,19 +142,19 @@ window.addEventListener("beforeunload",e=>{if(hayCambios()){guardarAhora();e.pre
 
 /* Alta automática de una empresa nueva detectada en el Excel por su RUC */
 function altaDesdeExcel(ruc){
-  const e={ruc,nombre:`RUC ${ruc}`,alias:"",lv:null,sab:null,porDefinir:true,base31:false,reglaBrutoVac:false,activa:true,nueva:true};
+  const e={ruc,nombre:`RUC ${ruc}`,alias:"",lv:null,sab:null,porDefinir:true,base31:false,reglaBrutoVac:false,activa:true,nueva:true,color:null};e.color=colorLibre();
   DB.empresas.push(e);
   pendienteAlta=(async()=>{
     const {error}=await sb.from("empresas").insert(filaDeEmp(e));
     if(error)aviso("No se pudo registrar la empresa nueva: "+mensajeError(error));
-    else{aviso(`Se registró la empresa RUC ${ruc}. Completa su razón social y jornada en «Empresas».`);renderEmpresas();renderPanel()}
+    else{aviso(`Se registró la empresa RUC ${ruc}. Completa su razón social, jornada y color en «Empresas».`);renderEmpresas();renderPanel();renderFiltrosCodigos()}
   })();
   return e;
 }
 
 /* Registro del ZIP descargado en el historial */
 async function registrarExportacion(r){
-  const fila={ruc:r.ruc,empresa:r.empresa,periodo:r.periodo,trabajadores:r.trabajadores,ingresos:r.ingresos,renta_quinta:r.quinta,recibos:r.recibos,observaciones:r.observaciones,archivo:r.archivo};
+  const fila={ruc:r.ruc,empresa:r.empresa,periodo:r.periodo,trabajadores:r.trabajadores,ingresos:r.ingresos,renta_quinta:r.quinta,recibos:r.recibos,observaciones:r.observaciones,archivo:r.archivo,...(DB.v2?{codigos_usados:r.codigos||[]}:{})};
   const {data,error}=await sb.from("exportaciones").upsert(fila,{onConflict:"ruc,periodo"}).select().single();
   if(error){aviso("ZIP descargado, pero no se pudo registrar en el historial: "+mensajeError(error));return}
   const i=DB.exportaciones.findIndex(x=>x.id===data.id);if(i>=0)DB.exportaciones[i]=data;else DB.exportaciones.push(data);
@@ -169,7 +179,13 @@ const REGLA_BRUTO_VAC=[
  {h:"VACACIONES PAGADAS",code:"0118",label:"Vacaciones pagadas como remuneración vacacional (regla de la empresa)",replaces:"DESCANSO / REMUNERACION VACACIONAL"}
 ];
 /* Se activa por empresa con la casilla «Regla sueldo bruto y vacaciones pagadas». */
-const colMap=()=>{const e=empresa();return e&&e.reglaBrutoVac?REGLA_BRUTO_VAC:[]};
+/* Más los códigos PDT PLAME propios de la empresa que tienen una columna del Excel asociada (sección «Códigos PLAME»). */
+const colMap=()=>{const e=empresa();if(!e)return [];const base=e.reglaBrutoVac?REGLA_BRUTO_VAC:[];const usadas=new Set(base.map(x=>x.h));
+  const propios=(INIT.codigos||[]).filter(c=>c.ruc===e.ruc&&c.activo&&c.tipo==="concepto"&&c.columna_excel).map(c=>({h:norm(c.columna_excel),code:c.codigo,label:c.descripcion,propio:true}))
+    .filter(x=>x.h&&!usadas.has(x.h)&&usadas.add(x.h));
+  return base.concat(propios)};
+/* Columnas asociadas a códigos propios de cualquier empresa: se leen siempre del Excel (sin quitarlas de las columnas adicionales). */
+const columnasPropias=()=>[...new Set((INIT.codigos||[]).filter(c=>c.activo&&c.tipo==="concepto"&&c.columna_excel).map(c=>norm(c.columna_excel)).filter(Boolean))];
 const ALL_COLMAP_H=REGLA_BRUTO_VAC.map(x=>x.h);
 const BTK="20608947559";
 const MESES=["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SETIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
@@ -330,6 +346,7 @@ function parseSheet(ws){
     const hasComp=findCol(hdr,["SUELDO COMPUTABLE"])>=0;
     const fixed=new Set(Object.entries(col).filter(([k,x])=>x>=0&&!(k==="sueldo"&&!hasComp)).map(([,x])=>x));
     if(a>=-1&&b>a)for(let j=a+1;j<b;j++){if(fixed.has(j))continue;const h=hdr[j];if(!h||used.has(j)||/^(TOTAL|NETO|SUELDO NETO|COSTO|RECIBOS POR HONORARIOS|RENTA 4TA|DIAS|FECHA|CUENTA|BANCO|NRO|N° |CODIGO|PROVISION|% DE|SUELDO SEGUN|SUELDO PACTADO|EDAD|CARGO|PUESTO|AREA|CUSPP|CUPS|TELEFONO|HORAS (?!EXTRA))/.test(h)||ccol[h]!==undefined)continue;ccol[h]=j;extras.push(h)}}
+  for(const h of columnasPropias()){if(ccol[h]!==undefined)continue;const j=hdr.findIndex(x=>x===h);if(j>=0)ccol[h]=j}
   const rows=[];
   for(let i=hi+1;i<aoa.length;i++){
     const r=aoa[i]||[];const name=r[col.nombre],dni=r[col.dni];if(name&&/^TOTAL/.test(norm(name)))continue;if(dni!=null&&String(dni).replace(/[^0-9A-Z]/gi,"").length<6)continue;
@@ -397,10 +414,11 @@ function detectCompany(wb,fname){
 }
 function renderEmpresa(){
   const sel=$("#empresa");
-  if(!empresa()){sel.innerHTML="";$("#empNombre").textContent="Sin empresas activas";$("#empRuc").textContent="—";$("#empJornada").innerHTML="";return}
+  if(!empresa()){sel.innerHTML="";$("#empNombre").textContent="Sin empresas activas";$("#empRuc").textContent="—";$("#empJornada").innerHTML="";if(INIT.onEmpresa)INIT.onEmpresa(null);return}
   if(!sel.options.length)sel.innerHTML=EMPRESAS.filter(e=>e.activa!==false||e.ruc===S.ruc).map(e=>`<option value="${e.ruc}">${esc(e.nombre)}${e.alias&&norm(e.alias.split("|")[0])!==norm(e.nombre).slice(0,e.alias.split("|")[0].length)?" ("+esc(e.alias.replace(/\|/g," / "))+")":""}</option>`).join("");
   sel.value=S.ruc;const e=empresa();$("#empNombre").textContent=e.nombre;$("#empRuc").textContent=S.ruc;
   const j=S.settings.jornada;$("#empJornada").innerHTML=`${e.alias?esc(e.alias.replace(/\|/g," / "))+" · ":""}L–V ${j.lv} h · sáb ${j.sab>0?j.sab+" h":"no trabajan"}`+(e.base31?' <span class="chip info">sueldos a 31 días</span>':"")+(e.porDefinir?' <span class="chip warn">jornada por definir</span>':"");
+  if(INIT.onEmpresa)INIT.onEmpresa(e);
 }
 function loadWorkbook(buf,fname){
   let wb;
@@ -422,9 +440,9 @@ function loadWorkbook(buf,fname){
     if(!mm&&nn.includes("PLANILLA"))mm=fallbackM;
     if(!mm)continue;
     const p=parseSheet(wb.Sheets[n]);if(!p)continue;
-    sheets.push({name:n.trim(),month:mm,liq,...p});
+    sheets.push({name:n.trim(),src:n,month:mm,liq,...p});
   }
-  if(!sheets.length){for(const n of usable){if(isRHName(norm(n)))continue;const p=parseSheet(wb.Sheets[n]);if(p&&p.rows.length){sheets.push({name:n.trim(),month:fallbackM,liq:true,...p});break}}}
+  if(!sheets.length){for(const n of usable){if(isRHName(norm(n)))continue;const p=parseSheet(wb.Sheets[n]);if(p&&p.rows.length){sheets.push({name:n.trim(),src:n,month:fallbackM,liq:true,...p});break}}}
   if(!sheets.length){toast("No encontré la hoja de planilla: necesito una fila de títulos con DNI y nombres del trabajador.");return}
   let yr=per?per.y:null;
   if(!yr)for(const n of wb.SheetNames.slice(0,4)){const a=topText(wb.Sheets[n]);const m=a.match(/\b(20\d{2})\b/);if(m){yr=+m[1];break}}
@@ -434,7 +452,7 @@ function loadWorkbook(buf,fname){
   S.liq=sheets.every(x=>x.liq);S.per=per;S.sheetName=sheets[0].name;
   if(rhSheet&&(S.liq||sheets.length===1)){const list=parseRHSheet(wb.Sheets[rhSheet]);if(list){S.rhFromFile={month:sheets[0].month,year:yr||S.year,list}}}
   S.extraCols=[...new Set(sheets.flatMap(s=>s.extras||[]))];
-  S.sheets=sheets;S.year=yr||S.year;$("#year").value=S.year;
+  S.sheets=sheets;S.wbRef=wb;S.year=yr||S.year;$("#year").value=S.year;
   if(S.rhFromFile){S.rh[`${S.ruc}-${S.rhFromFile.year}${pad2(S.rhFromFile.month)}`]=S.rhFromFile.list;save();toast(`${sw}${S.rhFromFile.list.length} recibo(s) leído(s) de la hoja de RxH`)}
   $("#planillaName").textContent=fname;
   const want=[10,9].find(m=>sheets.some(s=>s.month===m));
@@ -485,15 +503,23 @@ const AUTO_RULES=[
  [/^COMISION(ES)?\b/,"0103","Comisiones o destajo"]
 ];
 function codeInfo(h){
-  const cm=colMap().find(x=>x.h===h);if(cm)return {code:cm.code,src:"empresa",label:cm.label};
+  const cm=colMap().find(x=>x.h===h);if(cm)return {code:cm.code,src:cm.propio?"propio":"empresa",label:cm.label};
   const m=h.match(/(?:CDG|COD(?:IGO)?\.?)\s*(\d{3,4})\b/)||h.match(/\(\s*(\d{4})\s*\)/)||h.match(/^(0\d{3})\b|\s(0\d{3})$/);
   if(m){const c=(m[1]||m[2]).padStart(4,"0");return {code:c,src:"titulo"}}
-  if(h in S.settings.concepts)return {code:S.settings.concepts[h]||"",src:"config"};
+  if(h in S.settings.concepts){const code=S.settings.concepts[h]||"";const p=code&&(INIT.codigos||[]).find(c=>c.ruc===S.ruc&&c.activo&&c.tipo==="concepto"&&c.codigo===code);return p?{code,src:"config",label:p.descripcion+" (código propio)"}:{code,src:"config"}}
   for(const [re,c,l] of AUTO_RULES)if(re.test(h))return {code:c,src:"auto",label:l};
   return {code:"",src:""};
 }
 const codeFor=h=>codeInfo(h).code;
-function allConcepts(){return DEFAULT_CONCEPTS.concat(colMap().map(x=>({h:x.h,code:x.code,label:x.label,regla:true})),(S.extraCols||[]).map(h=>({h,code:"",label:"Columna adicional del Excel: revisa el código",extra:true})))}
+function allConcepts(){const cm=colMap(),cmh=new Set(cm.map(x=>x.h));return DEFAULT_CONCEPTS.filter(c=>!cmh.has(c.h)).concat(cm.map(x=>({h:x.h,code:x.code,label:x.label,regla:!x.propio,propio:!!x.propio})),(S.extraCols||[]).filter(h=>!cmh.has(h)).map(h=>({h,code:"",label:"Columna adicional del Excel: revisa el código",extra:true})))}
+/* Catálogo base (para todas las empresas) y descripción de un código según la empresa actual */
+const SNL_BASE=[["05","Licencia sin goce de haber"],["07","Falta no justificada"],["20","Enfermedad o accidente (primeros 20 días)"],["21","Incapacidad temporal (subsidio)"],["23","Descanso vacacional"],["24","Cargo cívico / SMO"],["27","Licencia con goce de haber"]];
+let _catalogo=null;
+function catalogoBase(){if(_catalogo)return _catalogo;const m=new Map();for(const c of DEFAULT_CONCEPTS)if(c.code&&!m.has(c.code))m.set(c.code,c.label);for(const [,c,l] of AUTO_RULES)if(!m.has(c))m.set(c,l);
+  return _catalogo={concepto:[...m].sort((a,b)=>a[0].localeCompare(b[0])),snl:SNL_BASE.slice()}}
+function descCodigo(tipo,code,h){const p=(INIT.codigos||[]).find(c=>c.ruc===S.ruc&&c.tipo===tipo&&c.codigo===code);if(p)return p.descripcion;const b=catalogoBase()[tipo].find(x=>x[0]===code);return b?b[1]:(h||"")}
+const LIC_BASE=[["20","20 Enfermedad (primeros 20 días)"],["21","21 Incapacidad temporal (subsidio)"],["24","24 Cargo cívico / SMO"],["27","27 Licencia con goce"],["05","05 Licencia sin goce"]];
+function licOpciones(){return LIC_BASE.concat((INIT.codigos||[]).filter(c=>c.ruc===S.ruc&&c.activo&&c.tipo==="snl"&&!LIC_BASE.some(b=>b[0]===c.codigo)).map(c=>[c.codigo,esc(`${c.codigo} ${c.descripcion} (propio)`)]))}
 function feriadosDe(m){return String(S.settings.feriados[String(m)]||"").split(/[,;\s]+/).map(x=>+x).filter(x=>x>=1&&x<=31)}
 function overFor(doc){const k=sk();S.over[k]=S.over[k]||{};S.over[k][doc]=S.over[k][doc]||{};return S.over[k][doc]}
 function getOver(doc){return (S.over[sk()]||{})[doc]||{}}
@@ -749,7 +775,7 @@ function renderTrab(C){
       <td style="white-space:normal;min-width:180px">${w.alerts.length?w.alerts.map(chip).join(""):'<span class="chip ok">OK</span>'}</td>
       <td><button class="linkbtn" data-toggle="${esc(w.doc)}">${open?"Ocultar":"Detalle"}</button></td>
     </tr>`;
-    const det=open?`<tr class="det"><td colspan="19"><div class="concepts">${w.lines.map(l=>`<span><b>${l.code}</b> ${esc(l.h.toLowerCase())} ${f2(l.a)}</span>`).join("")}${w.snl.map(([c,d])=>`<span><b>SNL ${c}</b> ${d} día(s)</span>`).join("")}${w.lic>0?`<label>Código licencia <select data-ovs="licCode" data-doc="${esc(w.doc)}"><option value="">${esc(S.settings.snl.lic)} (general)</option>${[["20","20 Enfermedad (primeros 20 días)"],["21","21 Incapacidad temporal (subsidio)"],["24","24 Cargo cívico / SMO"],["27","27 Licencia con goce"],["05","05 Licencia sin goce"]].map(([c,l])=>`<option value="${c}"${getOver(w.doc).licCode===c?" selected":""}>${l}</option>`).join("")}</select></label>`:""}<span>Pensión: ${esc(w.r.pension||"—")}</span><span>Fila Excel ${w.r.row}</span>${Object.keys(getOver(w.doc)).length?`<button class="linkbtn" data-reset="${esc(w.doc)}">Volver a los valores del Excel</button>`:""}</div>${w.r.notes.length?`<div class="notes">${w.r.notes.map(n=>`<div><b>${esc(n.h)}:</b> ${esc(n.t)}</div>`).join("")}</div>`:""}</td></tr>`:"";
+    const det=open?`<tr class="det"><td colspan="19"><div class="concepts">${w.lines.map(l=>`<span><b>${l.code}</b> ${esc(l.h.toLowerCase())} ${f2(l.a)}</span>`).join("")}${w.snl.map(([c,d])=>`<span><b>SNL ${c}</b> ${d} día(s)</span>`).join("")}${w.lic>0?`<label>Código licencia <select data-ovs="licCode" data-doc="${esc(w.doc)}"><option value="">${esc(S.settings.snl.lic)} (general)</option>${licOpciones().map(([c,l])=>`<option value="${c}"${getOver(w.doc).licCode===c?" selected":""}>${l}</option>`).join("")}</select></label>`:""}<span>Pensión: ${esc(w.r.pension||"—")}</span><span>Fila Excel ${w.r.row}</span>${Object.keys(getOver(w.doc)).length?`<button class="linkbtn" data-reset="${esc(w.doc)}">Volver a los valores del Excel</button>`:""}</div>${w.r.notes.length?`<div class="notes">${w.r.notes.map(n=>`<div><b>${esc(n.h)}:</b> ${esc(n.t)}</div>`).join("")}</div>`:""}</td></tr>`:"";
     return main+det;
   }).join("");
   const exc=C.excluded.length?`<p class="note">Fuera del PLAME (no son 4ta ni 5ta): ${C.excluded.map(r=>`${esc(r.nombre)} — ${esc(r.modalidad)} S/ ${fmt(r.rhMonto||r.sueldo)}`).join(" · ")}. Las regalías con retención de 2da categoría van en el PDT 617.</p>`:"";
@@ -807,7 +833,7 @@ function renderArch(C,files){
   ${blockers.length||rhPend?`<div class="alertbox">${blockers.length?`<b>${blockers.length} observación(es) crítica(s):</b> ${esc(blockers.slice(0,4).join(" · "))}${blockers.length>4?" …":""}<br>`:""}${rhPend?`<b>${rhPend} recibo(s) sin número</b>: no van en .ps4 ni .4ta hasta completarlos.`:""}</div>`:""}
   ${(()=>{const miss={};for(const w of C.workers)for(const c of allConcepts()){const a=r2(w.r.amounts[c.h]||0);if(a&&!codeFor(c.h)){miss[c.h]=miss[c.h]||{t:0,n:0};miss[c.h].t+=a;miss[c.h].n++}}
     const k=Object.keys(miss);if(!k.length)return `<p class="note">Todas las columnas de la planilla con montos en este periodo tienen código PLAME y se exportan.</p>`;
-    return `<div class="alertbox"><b>Columnas con montos sin código PLAME:</b> no se están exportando. Asigna el código y se agregan al .rem.<div class="row" style="margin-top:8px">${k.map(h=>`<label class="f">${esc(h)} · ${miss[h].n} trab. · S/ ${fmt(miss[h].t)}<input data-cc="${esc(h)}" placeholder="código" style="width:6em"></label>`).join("")}</div></div>`})()}
+    return `<div class="alertbox"><b>Columnas con montos sin código PLAME:</b> no se están exportando. Asigna el código y se agregan al .rem, o regístralo como <button class="linkbtn" data-ver-codigos="${S.ruc}">código propio de la empresa</button>.<div class="row" style="margin-top:8px">${k.map(h=>`<label class="f">${esc(h)} · ${miss[h].n} trab. · S/ ${fmt(miss[h].t)}<input list="dl-conceptos" data-cc="${esc(h)}" placeholder="código" style="width:6em"></label>`).join("")}</div></div>`})()}
   <div class="files">${Object.keys(files).map(ext=>`<article class="panel file">
     <header><div><div class="fn">${esc(baseName())}.${ext}</div><div class="desc">${FILE_DESC[ext]} · ${files[ext].length} línea(s)</div></div>
     <button class="btn ghost sm" data-copy="${ext}"${files[ext].length?"":" disabled"}>Copiar</button></header>
@@ -823,17 +849,17 @@ function renderConf(C){
   v.innerHTML=`<div class="grid2">
   <section class="panel"><h3>Columnas del Excel → concepto PLAME (tabla 22)</h3>
     <div class="scroll"><table><thead><tr><th>Columna</th><th>Código</th><th>Concepto</th></tr></thead><tbody>
-    ${allConcepts().map(c=>`<tr><td>${esc(c.h)}${c.extra?' <span class="chip warn">nueva</span>':""}${c.regla?' <span class="chip ok">regla de la empresa</span>':""}${(()=>{const x=colMap().find(y=>y.replaces===c.h);return x&&S.sheets.some(sh=>sh.rows.some(r=>x.h in r.amounts))?` <span class="chip info">reemplazada por ${esc(x.h)}</span>`:""})()}${present.has(c.h)?' <span class="chip info">con montos</span>':""}</td><td>${(()=>{const ci=codeInfo(c.h);return `<input data-cc="${esc(c.h)}" value="${esc(ci.code)}" style="width:4.5em;text-align:left" placeholder="—" aria-label="Código ${esc(c.h)}"${ci.src==="titulo"||ci.src==="empresa"?" disabled":""}>${ci.src==="titulo"?' <span class="chip ok">del título</span>':ci.src==="auto"?' <span class="chip info">por nombre</span>':""}`})()}</td><td style="white-space:normal">${esc(codeInfo(c.h).label||c.label)}</td></tr>`).join("")}
+    ${allConcepts().map(c=>`<tr><td>${esc(c.h)}${c.extra?' <span class="chip warn">nueva</span>':""}${c.regla?' <span class="chip ok">regla de la empresa</span>':""}${c.propio?' <span class="chip ok">código propio de la empresa</span>':""}${(()=>{const x=colMap().find(y=>y.replaces===c.h);return x&&S.sheets.some(sh=>sh.rows.some(r=>x.h in r.amounts))?` <span class="chip info">reemplazada por ${esc(x.h)}</span>`:""})()}${present.has(c.h)?' <span class="chip info">con montos</span>':""}</td><td>${(()=>{const ci=codeInfo(c.h);return `<input list="dl-conceptos" data-cc="${esc(c.h)}" value="${esc(ci.code)}" style="width:4.5em;text-align:left" placeholder="—" aria-label="Código ${esc(c.h)}"${ci.src==="titulo"||ci.src==="empresa"||ci.src==="propio"?" disabled":""}>${ci.src==="titulo"?' <span class="chip ok">del título</span>':ci.src==="propio"?' <span class="chip ok">código propio</span>':ci.src==="auto"?' <span class="chip info">por nombre</span>':""}`})()}</td><td style="white-space:normal">${esc(codeInfo(c.h).label||c.label)}</td></tr>`).join("")}
     </tbody></table></div>
-    <p class="note">Una columna sin código no se exporta y aparece como observación. Para que un concepto no se envíe, deja su código vacío.</p>
+    <p class="note">Una columna sin código no se exporta y aparece como observación. Para que un concepto no se envíe, deja su código vacío. Para registrar un código que no está en el catálogo o asociar una columna a un código propio de esta empresa, usa <button class="linkbtn" data-ver-codigos="${S.ruc}">Códigos PDT PLAME</button>.</p>
   </section>
   <div style="display:flex;flex-direction:column;gap:14px">
   <section class="panel"><h3>Días no laborados (tabla 21)</h3>
     <div class="row">
-      <label class="f">Vacaciones<input data-snl="vac" value="${esc(st.snl.vac)}" style="width:4em"></label>
-      <label class="f">Faltas con descuento<input data-snl="faltas" value="${esc(st.snl.faltas)}" style="width:4em"></label>
-      <label class="f">Licencia / descanso médico<input data-snl="lic" value="${esc(st.snl.lic)}" style="width:4em"></label>
-      <label class="f">Otros días sin explicar<input data-snl="otros" value="${esc(st.snl.otros)}" style="width:4em"></label>
+      <label class="f">Vacaciones<input list="dl-snl" data-snl="vac" value="${esc(st.snl.vac)}" style="width:4em"></label>
+      <label class="f">Faltas con descuento<input list="dl-snl" data-snl="faltas" value="${esc(st.snl.faltas)}" style="width:4em"></label>
+      <label class="f">Licencia / descanso médico<input list="dl-snl" data-snl="lic" value="${esc(st.snl.lic)}" style="width:4em"></label>
+      <label class="f">Otros días sin explicar<input list="dl-snl" data-snl="otros" value="${esc(st.snl.otros)}" style="width:4em"></label>
     </div>
     <p class="note">20 = enfermedad o accidente (primeros 20 días) · 23 = descanso vacacional · 07 = falta no justificada · 05 = licencia sin goce. Los días antes del alta o después de la baja no se declaran.</p>
   </section>
@@ -909,7 +935,15 @@ function resumen(){
   return {ruc:S.ruc,empresa:empresa().nombre,periodo:periodKey(),trabajadores:C.workers.length,
     ingresos:r2(C.workers.reduce((s,w)=>s+w.ing,0)),quinta:r2(C.workers.reduce((s,w)=>s+w.quinta,0)),
     recibos:rh.filter(x=>rhIn(x).ok).length,
-    observaciones:C.workers.filter(w=>w.alerts.some(a=>a.t!=="info")).length+rh.filter(x=>rhIn(x).ok&&rhAlerts(x).length).length};
+    observaciones:C.workers.filter(w=>w.alerts.some(a=>a.t!=="info")).length+rh.filter(x=>rhIn(x).ok&&rhAlerts(x).length).length,
+    codigos:codigosUsados(C)};
+}
+/* Códigos que lleva la exportación (se guardan en el historial para protegerlo) */
+function codigosUsados(C){
+  const m=new Map();
+  for(const w of C.workers){for(const l of w.lines)if(!m.has("c"+l.code))m.set("c"+l.code,{tipo:"concepto",codigo:l.code,descripcion:descCodigo("concepto",l.code,l.h)});
+    for(const [c] of w.snl)if(!m.has("s"+c))m.set("s"+c,{tipo:"snl",codigo:c,descripcion:descCodigo("snl",c)})}
+  return [...m.values()].sort((a,b)=>a.tipo.localeCompare(b.tipo)||a.codigo.localeCompare(b.codigo));
 }
 async function downloadZip(){
   const blob=await makeZip();if(!blob){toast("No hay registros para exportar");return}
@@ -935,6 +969,21 @@ return {
     if(!EMPRESAS.some(e=>e.ruc===ruc))return;
     if(ruc!==S.ruc){useCompany(ruc);save();S.open={}}
     $("#empresa").innerHTML="";renderEmpresa();render();
+  },
+  /* Códigos propios agregados, editados o eliminados: se vuelve a leer el Excel ya cargado */
+  codigosCambiaron(){
+    if(S.wbRef&&S.sheets.length){for(const sh of S.sheets){const ws=S.wbRef.Sheets[sh.src];if(!ws)continue;const p=parseSheet(ws);if(p)Object.assign(sh,p)}S.extraCols=[...new Set(S.sheets.flatMap(x=>x.extras||[]))]}
+    renderEmpresa();render();
+  },
+  catalogoBase,
+  normalizar:norm,
+  /* Dónde se usa un código fuera del historial (avisos al eliminar) */
+  usoCodigo(ruc,tipo,codigo){
+    const out=[],st=S.settingsBy[ruc];
+    if(st&&tipo==="concepto"){const cols=Object.entries(st.concepts||{}).filter(([h,v])=>v===codigo&&(DEFAULT_CONCEPTS.find(c=>c.h===h)||{}).code!==codigo).map(([h])=>h);if(cols.length)out.push(`la configuración de columnas (${cols.join(", ")})`)}
+    if(st&&tipo==="snl"){const k=Object.entries(st.snl||{}).filter(([,v])=>v===codigo).map(([k])=>({vac:"vacaciones",faltas:"faltas",lic:"licencias",otros:"otros días"})[k]||k);if(k.length)out.push(`los códigos de días no laborados (${k.join(", ")})`)}
+    if(tipo==="snl"){let n=0;for(const k in S.over)if(k.startsWith(ruc+"-"))for(const d in S.over[k])if(S.over[k][d]&&S.over[k][d].licCode===codigo)n++;if(n)out.push(`${n} corrección(es) de licencia de trabajadores`)}
+    return out;
   },
   /* Quitar de memoria lo guardado de una empresa eliminada */
   olvidarEmpresa(ruc){
@@ -967,34 +1016,46 @@ function renderPanel(){
   q("#dashAvanceNote").textContent=`${perLabel(per)} · ${act.length-gen} pendiente(s) de generar`;
   const filtro=q("#dashFiltro").value;
   const vis=filas.filter(f=>filtro==="todas"||(filtro==="pendiente"?!f.x:f.x&&f.x.estado===filtro));
-  q("#dashTabla").innerHTML=vis.length?vis.map(({e,x})=>`<tr>
-    <td class="wrap"><b>${escH(e.nombre)}</b><div class="note mono">${e.ruc}</div></td>
+  q("#dashTabla").innerHTML=vis.length?vis.map(({e,x})=>{const c=colorDe(e);return `<tr class="emp-row" style="--c:${c}">
+    <td class="wrap"><div class="emp-cell">${punto(c)}<div><b>${escH(e.nombre)}</b><div class="note mono">${e.ruc}</div></div></div></td>
     <td>${chipEstado(x?x.estado:"pendiente")}</td>
     <td class="num">${x?x.trabajadores:"—"}</td>
     <td class="num">${x?money(x.ingresos):"—"}</td>
     <td class="num">${x?money(x.renta_quinta):"—"}</td>
     <td><div class="row" style="gap:8px;flex-wrap:nowrap"><button class="linkbtn" data-abrir="${e.ruc}">Abrir</button>${x&&x.estado!=="declarado"?`<button class="linkbtn" data-declarar="${x.id}">Marcar declarado</button>`:""}</div></td>
-  </tr>`).join(""):`<tr class="empty-row"><td colspan="6">No hay empresas en este filtro.</td></tr>`;
+  </tr>`}).join(""):`<tr class="empty-row"><td colspan="6">No hay empresas en este filtro.</td></tr>`;
   renderGrafico(per);
   const tot=DB.empresas.length;
   const fila=(t,v)=>`<div class="srow"><span>${t}</span><b>${v}</b></div>`;
   q("#dashCartera").innerHTML=fila("Empresas registradas",tot)+fila("Activas",act.length)+fila("Inactivas",tot-act.length)
     +fila("Jornada por definir",DB.empresas.filter(e=>e.porDefinir).length)+fila("Sueldos a 31 días",DB.empresas.filter(e=>e.base31).length)
-    +fila("Con regla sueldo bruto / vacaciones",DB.empresas.filter(e=>e.reglaBrutoVac).length)+fila("Exportaciones en el historial",DB.exportaciones.length);
+    +fila("Con regla sueldo bruto / vacaciones",DB.empresas.filter(e=>e.reglaBrutoVac).length)
+    +fila("Códigos PDT PLAME propios",`${DB.codigos.filter(c=>c.activo).length} en ${new Set(DB.codigos.filter(c=>c.activo).map(c=>c.ruc)).size} empresa(s)`)
+    +fila("Exportaciones en el historial",DB.exportaciones.length);
 }
+/* Gráfico apilado: cada segmento es una empresa con su color */
 function renderGrafico(per){
   const y=+per.slice(0,4),m=+per.slice(4);const pers=[];
   for(let i=11;i>=0;i--){const d=new Date(y,m-1-i,1);pers.push(`${d.getFullYear()}${p2(d.getMonth()+1)}`)}
-  const val=pers.map(p=>DB.exportaciones.filter(x=>x.periodo===p).reduce((s,x)=>s+(+x.ingresos||0),0));
-  const max=Math.max(...val);
+  const filas=DB.exportaciones.filter(x=>pers.includes(x.periodo)&&+x.ingresos>0);
+  const nombre=r=>{const e=DB.empresas.find(z=>z.ruc===r);return e?e.nombre:(filas.find(x=>x.ruc===r)||{}).empresa||r};
+  const rucs=[...new Set(filas.map(x=>x.ruc))].sort((a,b)=>nombre(a).localeCompare(nombre(b)));
+  const tot=pers.map(p=>filas.filter(x=>x.periodo===p).reduce((s,x)=>s+(+x.ingresos||0),0));
+  const max=Math.max(...tot);
   if(!max){q("#dashChart").innerHTML=`<div class="chart-empty">Aún no hay exportaciones registradas en estos 12 periodos.</div>`;return}
-  const W=560,H=230,L=8,B=28,T=22,bw=(W-L*2)/12;
+  const W=560,H=240,L=8,B=28,T=22,bw=(W-L*2)/12;
   const corto=v=>v>=1e6?(v/1e6).toFixed(1)+"M":v>=1e3?Math.round(v/1e3)+"k":String(Math.round(v));
-  const bars=val.map((v,i)=>{const h=v?Math.max(2,(H-B-T)*v/max):0;const x=L+i*bw+bw*.18,w=bw*.64,yy=H-B-h;const p=pers[i];
-    return `<g><title>${perLabel(p)}: S/ ${money(v)}</title><rect class="bar${p===per?" cur":""}" x="${x.toFixed(1)}" y="${yy.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2"></rect>
-    ${v?`<text class="val" x="${(x+w/2).toFixed(1)}" y="${(yy-5).toFixed(1)}" text-anchor="middle">${corto(v)}</text>`:""}
-    <text x="${(x+w/2).toFixed(1)}" y="${H-10}" text-anchor="middle">${MESES_UI[+p.slice(4)-1].slice(0,3)}${p.slice(4)==="01"||i===0?" "+p.slice(2,4):""}</text></g>`}).join("");
-  q("#dashChart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ingresos declarados por periodo"><line class="axis" x1="${L}" x2="${W-L}" y1="${H-B}" y2="${H-B}"></line>${bars}</svg>`;
+  const cols=pers.map((p,i)=>{
+    const x=L+i*bw+bw*.18,w=bw*.64;let yy=H-B;let segs="";
+    for(const r of rucs){const v=filas.filter(z=>z.periodo===p&&z.ruc===r).reduce((s,z)=>s+(+z.ingresos||0),0);if(!v)continue;
+      const h=Math.max(1.5,(H-B-T)*v/max);yy-=h;
+      segs+=`<rect class="seg" x="${x.toFixed(1)}" y="${yy.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" style="fill:${colorRuc(r)}"><title>${escH(nombre(r))}\n${perLabel(p)}: S/ ${money(v)}</title></rect>`}
+    return `<g>${p===per?`<rect class="sel-col" x="${(L+i*bw+2).toFixed(1)}" y="4" width="${(bw-4).toFixed(1)}" height="${H-B-2}" rx="5"></rect>`:""}${segs}
+      ${tot[i]?`<text class="val" x="${(x+w/2).toFixed(1)}" y="${(yy-5).toFixed(1)}" text-anchor="middle">${corto(tot[i])}</text>`:""}
+      <text x="${(x+w/2).toFixed(1)}" y="${H-10}" text-anchor="middle"${p===per?' class="cur"':""}>${MESES_UI[+p.slice(4)-1].slice(0,3)}${p.slice(4)==="01"||i===0?" "+p.slice(2,4):""}</text></g>`}).join("");
+  q("#dashChart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ingresos declarados por periodo y empresa"><line class="axis" x1="${L}" x2="${W-L}" y1="${H-B}" y2="${H-B}"></line>${cols}</svg>`;
+  const delPer=rucs.map(r=>({r,v:filas.filter(z=>z.periodo===per&&z.ruc===r).reduce((s,z)=>s+(+z.ingresos||0),0)})).filter(z=>z.v).sort((a,b)=>b.v-a.v);
+  q("#dashLeyenda").innerHTML=delPer.length?delPer.map(z=>`<span>${punto(colorRuc(z.r))}${escH(nombre(z.r))} · ${money(z.v)}</span>`).join(""):`<span class="note">Sin exportaciones en ${perLabel(per)}.</span>`;
 }
 async function marcarDeclarado(id){
   const {data,error}=await sb.from("exportaciones").update({estado:"declarado"}).eq("id",id).select().single();
@@ -1004,27 +1065,38 @@ async function marcarDeclarado(id){
 }
 
 /* ---------- 7. Empresas ---------- */
+const codigosDe=ruc=>DB.codigos.filter(c=>c.ruc===ruc);
 function renderEmpresas(){
   if(!DB.user)return;
   const t=q("#empBuscar").value.trim().toUpperCase(),f=q("#empFiltro").value;
   const lista=DB.empresas.filter(e=>{
     if(f==="activas"&&!e.activa)return false;if(f==="inactivas"&&e.activa)return false;
     if(f==="pordefinir"&&!e.porDefinir)return false;if(f==="regla"&&!(e.base31||e.reglaBrutoVac))return false;
+    if(f==="codigos"&&!codigosDe(e.ruc).length)return false;
     return !t||e.nombre.toUpperCase().includes(t)||e.ruc.includes(t)||e.alias.toUpperCase().includes(t);
   }).sort((a,b)=>a.nombre.localeCompare(b.nombre));
   q("#empConteo").textContent=`${lista.length} de ${DB.empresas.length} empresa(s)`;
-  q("#empTabla").innerHTML=lista.length?lista.map(e=>`<tr>
+  q("#empTabla").innerHTML=lista.length?lista.map(e=>{const c=colorDe(e),n=codigosDe(e.ruc).length;return `<tr class="emp-row" style="--c:${c}">
     <td class="mono">${e.ruc}${rucValido(e.ruc)?"":' <span class="chip warn" title="El dígito verificador no coincide">verificar</span>'}</td>
-    <td class="wrap" style="min-width:200px"><b>${escH(e.nombre)}</b>${e.nueva?' <span class="chip warn">completar datos</span>':""}</td>
+    <td class="wrap" style="min-width:200px"><div class="emp-cell">${punto(c,"Color "+c.toUpperCase())}<div><b>${escH(e.nombre)}</b>${e.nueva?' <span class="chip warn">completar datos</span>':""}</div></div></td>
     <td class="wrap">${e.alias?e.alias.split("|").filter(Boolean).map(a=>`<span class="chip muted">${escH(a)}</span>`).join(""):"—"}</td>
     <td class="num">${e.lv==null?"—":e.lv}</td>
     <td class="num">${e.sab==null?"—":e.sab}</td>
     <td class="wrap">${e.porDefinir?'<span class="chip warn">jornada por definir</span>':""}${e.base31?'<span class="chip info">31 días</span>':""}${e.reglaBrutoVac?'<span class="chip info">bruto / vac. pagadas</span>':""}</td>
+    <td class="num"><button class="linkbtn" data-ver-codigos="${e.ruc}" title="Ver o agregar códigos PDT PLAME de esta empresa">${n||"+"}</button></td>
     <td>${e.activa?'<span class="chip ok">Activa</span>':'<span class="chip muted">Inactiva</span>'}</td>
     <td><div class="row" style="gap:10px;flex-wrap:nowrap"><button class="linkbtn" data-emp-edit="${e.ruc}">Editar</button><button class="linkbtn bad" data-emp-del="${e.ruc}">Eliminar</button></div></td>
-  </tr>`).join(""):`<tr class="empty-row"><td colspan="8">${DB.empresas.length?"Ninguna empresa coincide con la búsqueda.":"Aún no hay empresas. Usa «+ Nueva empresa»."}</td></tr>`;
+  </tr>`}).join(""):`<tr class="empty-row"><td colspan="9">${DB.empresas.length?"Ninguna empresa coincide con la búsqueda.":"Aún no hay empresas. Usa «+ Nueva empresa»."}</td></tr>`;
 }
 let empEditando=null,empConfirmarRuc=false;
+function colorLibre(){const usados=new Set(DB.empresas.map(e=>colorDe(e)));return PALETA.find(c=>!usados.has(c))||PALETA[DB.empresas.length%PALETA.length]}
+function elegirColor(c){
+  c=String(c).toLowerCase();if(!esColor(c))return;
+  q("#feColor").value=c;q("#feColorHex").textContent=c.toUpperCase();
+  const pv=q("#fePreview");pv.style.setProperty("--c",c);pv.style.setProperty("--t",textoSobre(c));
+  pv.textContent=(q("#feNombre").value.trim()||"Vista previa de la empresa").toUpperCase();
+  qa("#feSwatches .swatch").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.swatch===c)));
+}
 function abrirFormEmpresa(ruc){
   const f=q("#formEmpresa");limpiarErrores(f);q("#feAviso").hidden=true;empConfirmarRuc=false;
   const e=ruc?DB.empresas.find(x=>x.ruc===ruc):null;empEditando=e;
@@ -1034,6 +1106,9 @@ function abrirFormEmpresa(ruc){
   q("#feAlias").value=e?e.alias:"";q("#feLv").value=e&&e.lv!=null?e.lv:"";q("#feSab").value=e&&e.sab!=null?e.sab:"";
   q("#feBase31").checked=!!(e&&e.base31);q("#feRegla").checked=!!(e&&e.reglaBrutoVac);q("#feActiva").value=!e||e.activa?"1":"0";
   q("#feGuardar").textContent="Guardar empresa";
+  q("#feSwatches").innerHTML=PALETA.map(c=>`<button type="button" class="swatch" style="--c:${c}" data-swatch="${c}" aria-label="Color ${c.toUpperCase()}" aria-pressed="false"></button>`).join("");
+  q("#feColorWrap").hidden=!DB.v2;
+  elegirColor(e?colorDe(e):colorLibre());
   q("#dlgEmpresa").showModal();(e?q("#feNombre"):q("#feRuc")).focus();
 }
 async function guardarEmpresa(ev){
@@ -1049,13 +1124,15 @@ async function guardarEmpresa(ev){
   const horas=(t,c)=>{if(t==="")return null;const v=+t;if(!isFinite(v)||v<0||v>24){marcarError(f,c,"Debe estar entre 0 y 24 horas.");ok=false;return null}return v};
   const lv=horas(lvT,"lv"),sab=horas(sabT,"sab");
   if(lvT===""&&sabT!==""){marcarError(f,"lv","Completa también las horas de lunes a viernes, o deja ambas vacías.");ok=false}
+  const color=q("#feColor").value.toLowerCase();
+  if(DB.v2&&!esColor(color)){marcarError(f,"color","Elige un color.");ok=false}
   if(!ok)return;
   if(!empEditando&&!rucValido(ruc)&&!empConfirmarRuc){
     empConfirmarRuc=true;const a=q("#feAviso");a.hidden=false;
     a.textContent="El dígito verificador de este RUC no coincide. Revisa el número; si es correcto, vuelve a pulsar «Guardar de todos modos».";
     q("#feGuardar").textContent="Guardar de todos modos";return;
   }
-  const datos={ruc:empEditando?empEditando.ruc:ruc,nombre,alias,lv,sab,base31:q("#feBase31").checked,reglaBrutoVac:q("#feRegla").checked,activa:q("#feActiva").value==="1"};
+  const datos={ruc:empEditando?empEditando.ruc:ruc,nombre,alias,lv,sab,base31:q("#feBase31").checked,reglaBrutoVac:q("#feRegla").checked,activa:q("#feActiva").value==="1",color};
   const btn=q("#feGuardar");btn.disabled=true;
   try{
     const fila=filaDeEmp(datos);
@@ -1067,20 +1144,21 @@ async function guardarEmpresa(ev){
     if(empEditando)Object.assign(empEditando,nueva,{nueva:false});else DB.empresas.push(nueva);
     q("#dlgEmpresa").close();
     aviso(empEditando?`Se actualizó ${nueva.nombre}`:`Se registró ${nueva.nombre}`);
-    ENGINE.empresasCambiaron();renderEmpresas();renderPanel();renderFiltrosHistorial();
+    ENGINE.empresasCambiaron();renderEmpresas();renderPanel();renderFiltrosHistorial();renderHistorial();renderFiltrosCodigos();renderCodigos();
   }catch(err){const a=q("#feAviso");a.hidden=false;a.textContent=mensajeError(err)}
   finally{btn.disabled=false}
 }
 async function eliminarEmpresa(ruc){
   const e=DB.empresas.find(x=>x.ruc===ruc);if(!e)return;
-  const ok=await confirmar("Eliminar empresa",`Se eliminará ${e.nombre} (RUC ${e.ruc}) junto con su configuración de conceptos y jornada, y las correcciones guardadas de todos sus periodos. El historial de exportaciones se conserva. Esta acción no se puede deshacer. Si solo quieres ocultarla, edítala y márcala como inactiva.`,"Eliminar empresa");
+  const ok=await confirmar("Eliminar empresa",`Se eliminará ${e.nombre} (RUC ${e.ruc}) junto con su configuración de conceptos y jornada, sus códigos PDT PLAME propios y las correcciones guardadas de todos sus periodos. El historial de exportaciones se conserva. Esta acción no se puede deshacer. Si solo quieres ocultarla, edítala y márcala como inactiva.`,"Eliminar empresa");
   if(!ok)return;
   await guardarAhora();
   const {error}=await sb.from("empresas").delete().eq("ruc",ruc);
   if(error){aviso(mensajeError(error));return}
   DB.empresas.splice(DB.empresas.indexOf(e),1);
+  for(let i=DB.codigos.length-1;i>=0;i--)if(DB.codigos[i].ruc===ruc)DB.codigos.splice(i,1);
   ENGINE.olvidarEmpresa(ruc);olvidarSnapshot(ruc);ENGINE.empresasCambiaron();
-  aviso(`Se eliminó ${e.nombre}`);renderEmpresas();renderPanel();renderFiltrosHistorial();
+  aviso(`Se eliminó ${e.nombre}`);renderEmpresas();renderPanel();renderFiltrosHistorial();renderFiltrosCodigos();renderCodigos();
 }
 
 /* ---------- 8. Historial ---------- */
@@ -1102,18 +1180,20 @@ function renderHistorial(){
   if(!DB.user)return;
   const l=historialFiltrado();
   q("#histConteo").textContent=`${l.length} registro(s)`;
-  q("#histTabla").innerHTML=l.length?l.map(x=>`<tr>
+  const listaCod=x=>(x.codigos_usados||[]).map(u=>`${u.codigo} ${u.descripcion||""}`.trim()).join("\n");
+  q("#histTabla").innerHTML=l.length?l.map(x=>{const c=colorRuc(x.ruc),nc=(x.codigos_usados||[]).length;return `<tr class="emp-row" style="--c:${c}">
     <td class="mono">${perCorto(x.periodo)}</td>
-    <td class="wrap" style="min-width:180px"><b>${escH(x.empresa)}</b><div class="note mono">${x.ruc}</div></td>
+    <td class="wrap" style="min-width:180px"><div class="emp-cell">${punto(c)}<div><b>${escH(x.empresa)}</b><div class="note mono">${x.ruc}</div></div></div></td>
     <td class="num">${x.trabajadores}</td><td class="num">${money(x.ingresos)}</td><td class="num">${money(x.renta_quinta)}</td>
     <td class="num">${x.recibos}</td><td class="num">${x.observaciones}</td>
+    <td class="num">${nc?`<span class="has-tip" title="${escH(listaCod(x))}">${nc}</span>`:'<span class="note">—</span>'}</td>
     <td>${chipEstado(x.estado)}</td>
     <td class="wrap" style="min-width:140px;max-width:260px">${escH(x.nota||"")||'<span class="note">—</span>'}</td>
     <td class="note">${fechaHora(x.actualizado_en)}</td>
     <td><div class="row" style="gap:10px;flex-wrap:nowrap"><button class="linkbtn" data-hist-edit="${x.id}">Editar</button><button class="linkbtn bad" data-hist-del="${x.id}">Eliminar</button></div></td>
-  </tr>`).join(""):`<tr class="empty-row"><td colspan="11">${DB.exportaciones.length?"Ningún registro coincide con los filtros.":"Aún no hay exportaciones. Se registran solas al descargar el ZIP en «Exportar PLAME»."}</td></tr>`;
+  </tr>`}).join(""):`<tr class="empty-row"><td colspan="12">${DB.exportaciones.length?"Ningún registro coincide con los filtros.":"Aún no hay exportaciones. Se registran solas al descargar el ZIP en «Exportar PLAME»."}</td></tr>`;
   const s=k=>l.reduce((a,x)=>a+(+x[k]||0),0);
-  q("#histPie").innerHTML=l.length?`<tr><th colspan="2">Totales de la selección</th><th class="num">${s("trabajadores")}</th><th class="num">${money(s("ingresos"))}</th><th class="num">${money(s("renta_quinta"))}</th><th class="num">${s("recibos")}</th><th class="num">${s("observaciones")}</th><th colspan="4"></th></tr>`:"";
+  q("#histPie").innerHTML=l.length?`<tr><th colspan="2">Totales de la selección</th><th class="num">${s("trabajadores")}</th><th class="num">${money(s("ingresos"))}</th><th class="num">${money(s("renta_quinta"))}</th><th class="num">${s("recibos")}</th><th class="num">${s("observaciones")}</th><th colspan="5"></th></tr>`:"";
 }
 let histEditando=null;
 function abrirFormHist(id){
@@ -1163,9 +1243,155 @@ async function eliminarHist(id){
 function csvHistorial(){
   const l=historialFiltrado();if(!l.length){aviso("No hay registros para el reporte");return}
   const c=v=>{const s=String(v??"");return /[",\n;]/.test(s)?`"${s.replace(/"/g,'""')}"`:s};
-  const filas=[["Periodo","RUC","Empresa","Trabajadores","Ingresos","Renta 5ta","Recibos 4ta","Observaciones","Estado","Nota","Archivo","Actualizado"]]
-    .concat(l.map(x=>[perCorto(x.periodo),x.ruc,x.empresa,x.trabajadores,(+x.ingresos).toFixed(2),(+x.renta_quinta).toFixed(2),x.recibos,x.observaciones,ESTADOS[x.estado][1],x.nota||"",x.archivo,fechaHora(x.actualizado_en)]));
+  const filas=[["Periodo","RUC","Empresa","Color","Trabajadores","Ingresos","Renta 5ta","Recibos 4ta","Observaciones","Estado","Nota","Códigos usados","Archivo","Actualizado"]]
+    .concat(l.map(x=>[perCorto(x.periodo),x.ruc,x.empresa,colorRuc(x.ruc).toUpperCase(),x.trabajadores,(+x.ingresos).toFixed(2),(+x.renta_quinta).toFixed(2),x.recibos,x.observaciones,ESTADOS[x.estado][1],x.nota||"",
+      (x.codigos_usados||[]).map(u=>`${u.codigo} ${u.descripcion||""}`.trim()).join(" | "),x.archivo,fechaHora(x.actualizado_en)]));
   descargar(new Blob(["﻿"+filas.map(r=>r.map(c).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"}),`historial_plame_${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+/* ---------- 8b. Códigos PDT PLAME por empresa ----------
+   Cada código pertenece a UNA empresa (tabla codigos_plame). Los de tipo
+   «concepto» con una columna del Excel hacen que esa columna se declare con
+   ese código en esa empresa; los de tipo «snl» se ofrecen como código de
+   licencia o de días no laborados. Un código que ya aparece en el historial
+   no se puede eliminar (solo desactivar) ni cambiar de número. */
+const TIPO_COD={concepto:["info","Concepto · tabla 22"],snl:["muted","Día no laborado · tabla 21"]};
+const nombreEmp=ruc=>{const e=DB.empresas.find(x=>x.ruc===ruc);return e?e.nombre:ruc};
+const usosHistorial=(ruc,tipo,codigo)=>DB.exportaciones.filter(x=>x.ruc===ruc&&(x.codigos_usados||[]).some(u=>u.tipo===tipo&&u.codigo===codigo));
+const baseDe=(tipo,codigo)=>{const b=ENGINE?ENGINE.catalogoBase()[tipo].find(x=>x[0]===codigo):null;return b?b[1]:""};
+function renderFiltrosCodigos(){
+  const se=q("#codEmpresa"),va=se.value;
+  se.innerHTML=`<option value="">Todas las empresas</option>`+DB.empresas.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(e=>`<option value="${e.ruc}">${escH(e.nombre)}</option>`).join("");
+  se.value=DB.empresas.some(e=>e.ruc===va)?va:"";
+}
+function codigosFiltrados(){
+  const t=q("#codBuscar").value.trim().toUpperCase(),r=q("#codEmpresa").value,tp=q("#codTipo").value,es=q("#codEstado").value;
+  return DB.codigos.filter(c=>(!r||c.ruc===r)&&(!tp||c.tipo===tp)&&(!es||(es==="activos"?c.activo:!c.activo))
+    &&(!t||c.codigo.includes(t)||c.descripcion.toUpperCase().includes(t)||String(c.columna_excel||"").toUpperCase().includes(t)||nombreEmp(c.ruc).toUpperCase().includes(t)))
+    .sort((a,b)=>nombreEmp(a.ruc).localeCompare(nombreEmp(b.ruc))||a.tipo.localeCompare(b.tipo)||a.codigo.localeCompare(b.codigo));
+}
+function renderCodigos(){
+  if(!DB.user)return;
+  q("#codSinV2").hidden=DB.v2;q("#codNuevo").disabled=!DB.v2;
+  const l=codigosFiltrados();
+  q("#codConteo").textContent=`${l.length} de ${DB.codigos.length} código(s) · ${new Set(DB.codigos.map(c=>c.ruc)).size} empresa(s) con códigos propios`;
+  q("#codTabla").innerHTML=l.length?l.map(c=>{const col=colorRuc(c.ruc),u=usosHistorial(c.ruc,c.tipo,c.codigo),b=baseDe(c.tipo,c.codigo),[tc,tt]=TIPO_COD[c.tipo];return `<tr class="emp-row${c.activo?"":" inactivo"}" style="--c:${col}">
+    <td class="wrap" style="min-width:170px"><div class="emp-cell">${punto(col)}<div><b>${escH(nombreEmp(c.ruc))}</b><div class="note mono">${c.ruc}</div></div></div></td>
+    <td><span class="chip ${tc}">${tt}</span></td>
+    <td class="mono"><b>${c.codigo}</b></td>
+    <td class="wrap" style="min-width:200px">${escH(c.descripcion)}${b?`<div class="note">Catálogo base: ${escH(b)}</div>`:'<div class="note">Código nuevo (no está en el catálogo base)</div>'}</td>
+    <td class="wrap mono" style="max-width:220px">${c.columna_excel?escH(c.columna_excel):'<span class="note">—</span>'}</td>
+    <td>${c.activo?'<span class="chip ok">Activo</span>':'<span class="chip muted">Inactivo</span>'}</td>
+    <td class="num">${u.length?`<span class="has-tip" title="${escH(u.map(x=>perLabel(x.periodo)).join("\n"))}">${u.length}</span>`:'<span class="note">—</span>'}</td>
+    <td><div class="row" style="gap:10px;flex-wrap:nowrap"><button class="linkbtn" data-cod-edit="${c.id}">Editar</button><button class="linkbtn" data-cod-toggle="${c.id}">${c.activo?"Desactivar":"Activar"}</button><button class="linkbtn bad" data-cod-del="${c.id}">Eliminar</button></div></td>
+  </tr>`}).join(""):`<tr class="empty-row"><td colspan="8">${!DB.v2?"Ejecuta la actualización de la base de datos para usar esta sección.":DB.codigos.length?"Ningún código coincide con los filtros.":"Aún no hay códigos propios. Usa «+ Nuevo código» para agregar el primero."}</td></tr>`;
+  renderCatalogoBase();
+}
+function renderCatalogoBase(){
+  if(!ENGINE)return;const cat=ENGINE.catalogoBase(),t=q("#codBuscar").value.trim().toUpperCase();
+  const f=l=>l.filter(([c,d])=>!t||c.includes(t)||d.toUpperCase().includes(t));
+  const tabla=(l)=>l.length?l.map(([c,d])=>`<tr><td class="mono"><b>${c}</b></td><td class="wrap">${escH(d)}</td></tr>`).join(""):`<tr class="empty-row"><td colspan="2">Sin coincidencias.</td></tr>`;
+  q("#codBaseConceptos").innerHTML=tabla(f(cat.concepto));q("#codBaseSnl").innerHTML=tabla(f(cat.snl));
+}
+let codEditando=null;
+function ayudaCodigo(){
+  const tipo=q("#fcTipo").value,cod=q("#fcCodigo").value.trim(),ruc=q("#fcEmpresa").value;
+  q("#fcCodigo").maxLength=tipo==="concepto"?4:2;q("#fcCodigo").placeholder=tipo==="concepto"?"Ej.: 0918":"Ej.: 16";
+  q("#fcColumnaWrap").hidden=tipo!=="concepto";
+  const completo=cod.length===(tipo==="concepto"?4:2);
+  const a=q("#fcAyuda"),b=completo?baseDe(tipo,cod):"";
+  const otras=completo?DB.codigos.filter(c=>c.tipo===tipo&&c.codigo===cod&&c.ruc!==ruc):[];
+  const msgs=[];
+  if(b)msgs.push(`Este código ya existe en el catálogo base como «${b}». Al registrarlo aquí, esta empresa usará tu descripción.`);
+  else if(completo)msgs.push("Código nuevo: no está en el catálogo base del sistema.");
+  if(otras.length)msgs.push(`También lo usa: ${otras.map(c=>nombreEmp(c.ruc)).join(", ")}. Cada empresa conserva su propia versión.`);
+  a.hidden=!msgs.length;a.textContent=msgs.join(" ");
+}
+function abrirFormCodigo(id,rucPre){
+  if(!DB.v2){aviso("Primero ejecuta la actualización de la base de datos (supabase_actualizacion_v2.sql).");return}
+  const f=q("#formCodigo");limpiarErrores(f);q("#fcAviso").hidden=true;
+  const c=id?DB.codigos.find(x=>x.id===id):null;codEditando=c;
+  q("#dlgCodTitulo").textContent=c?"Editar código PDT PLAME":"Nuevo código PDT PLAME";
+  const se=q("#fcEmpresa");
+  se.innerHTML=`<option value="">Elige la empresa</option>`+DB.empresas.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(e=>`<option value="${e.ruc}">${escH(e.nombre)} · ${e.ruc}${e.activa?"":" (inactiva)"}</option>`).join("");
+  se.value=c?c.ruc:(rucPre||q("#codEmpresa").value||"");se.disabled=!!c;
+  q("#fcTipo").value=c?c.tipo:"concepto";q("#fcTipo").disabled=!!c;
+  q("#fcCodigo").value=c?c.codigo:"";q("#fcDescripcion").value=c?c.descripcion:"";
+  q("#fcColumna").value=c?c.columna_excel||"":"";q("#fcActivo").value=!c||c.activo?"1":"0";
+  const usos=c?usosHistorial(c.ruc,c.tipo,c.codigo).length:0;
+  q("#fcCodigo").disabled=usos>0;
+  q("#fcBloqueo").hidden=!usos;q("#fcBloqueo").textContent=usos?`Este código aparece en ${usos} exportación(es) del historial: puedes cambiar la descripción, la columna o el estado, pero no el número.`:"";
+  ayudaCodigo();q("#dlgCodigo").showModal();(c?q("#fcDescripcion"):se.value?q("#fcCodigo"):se).focus();
+}
+async function guardarCodigo(ev){
+  ev.preventDefault();const f=q("#formCodigo");limpiarErrores(f);q("#fcAviso").hidden=true;let ok=true;
+  const ruc=q("#fcEmpresa").value,tipo=q("#fcTipo").value,largo=tipo==="concepto"?4:2;
+  const crudo=q("#fcCodigo").value.trim(),descripcion=q("#fcDescripcion").value.trim().replace(/\s+/g," ");
+  const columna=tipo==="concepto"?q("#fcColumna").value.trim().replace(/\s+/g," ").toUpperCase():"";
+  const activo=q("#fcActivo").value==="1";
+  if(!ruc){marcarError(f,"empresa","Elige la empresa a la que pertenece el código.");ok=false}
+  if(!new RegExp(`^\\d{${largo}}$`).test(crudo)){marcarError(f,"codigo",tipo==="concepto"?"El código de concepto tiene exactamente 4 dígitos (tabla 22), por ejemplo 0918.":"El código de día no laborado tiene exactamente 2 dígitos (tabla 21), por ejemplo 16.");ok=false}
+  const codigo=crudo;
+  if(!descripcion){marcarError(f,"descripcion","Escribe la descripción o denominación del código.");ok=false}
+  else if(descripcion.length>150){marcarError(f,"descripcion","Máximo 150 caracteres.");ok=false}
+  if(ok&&DB.codigos.some(c=>c!==codEditando&&c.ruc===ruc&&c.tipo===tipo&&c.codigo===codigo)){marcarError(f,"codigo","Esta empresa ya tiene registrado ese código.");ok=false}
+  const nCol=ENGINE.normalizar(columna);
+  if(ok&&columna&&activo&&DB.codigos.some(c=>c!==codEditando&&c.ruc===ruc&&c.tipo==="concepto"&&c.activo&&ENGINE.normalizar(c.columna_excel)===nCol)){marcarError(f,"columna","Otro código activo de esta empresa ya usa esa columna.");ok=false}
+  if(ok&&codEditando&&codEditando.codigo!==codigo&&usosHistorial(codEditando.ruc,codEditando.tipo,codEditando.codigo).length){marcarError(f,"codigo","Este código ya está en el historial: no se puede cambiar el número.");ok=false}
+  if(!ok)return;
+  const fila={descripcion,columna_excel:columna,activo};
+  const btn=q("#fcGuardar");btn.disabled=true;
+  try{
+    const {data,error}=codEditando
+      ?await sb.from("codigos_plame").update({...fila,codigo}).eq("id",codEditando.id).select().single()
+      :await sb.from("codigos_plame").insert({...fila,ruc,tipo,codigo}).select().single();
+    if(error)throw error;
+    const i=DB.codigos.findIndex(x=>x.id===data.id);if(i>=0)DB.codigos[i]=data;else DB.codigos.push(data);
+    q("#dlgCodigo").close();aviso(`${codEditando?"Se actualizó":"Se registró"} el código ${codigo} de ${nombreEmp(ruc)}`);
+    trasCambioCodigos();
+  }catch(err){const a=q("#fcAviso");a.hidden=false;a.textContent=mensajeError(err)}
+  finally{btn.disabled=false}
+}
+function trasCambioCodigos(){if(ENGINE)ENGINE.codigosCambiaron();renderCodigos();renderEmpresas();renderPanel()}
+async function cambiarEstadoCodigo(id,forzar){
+  const c=DB.codigos.find(x=>x.id===id);if(!c)return;
+  const activo=forzar===undefined?!c.activo:forzar;
+  const {data,error}=await sb.from("codigos_plame").update({activo}).eq("id",id).select().single();
+  if(error){aviso(mensajeError(error));return}
+  DB.codigos[DB.codigos.indexOf(c)]=data;
+  aviso(`Código ${data.codigo} ${data.activo?"activado":"desactivado"} en ${nombreEmp(data.ruc)}`);trasCambioCodigos();
+}
+async function eliminarCodigo(id){
+  const c=DB.codigos.find(x=>x.id===id);if(!c)return;
+  const usos=usosHistorial(c.ruc,c.tipo,c.codigo);
+  if(usos.length){
+    const des=await confirmar("No se puede eliminar",`El código ${c.codigo} de ${nombreEmp(c.ruc)} aparece en ${usos.length} exportación(es) del historial (${usos.slice(0,4).map(x=>perLabel(x.periodo)).join(", ")}${usos.length>4?"…":""}). Para no alterar esos registros no se elimina. ${c.activo?"Puedes desactivarlo: dejará de usarse en las nuevas exportaciones y seguirá visible para consulta.":"Ya está desactivado."}`,c.activo?"Desactivar código":"Entendido");
+    if(des&&c.activo)await cambiarEstadoCodigo(id,false);
+    return;
+  }
+  const refs=ENGINE.usoCodigo(c.ruc,c.tipo,c.codigo);
+  const ok=await confirmar("Eliminar código",`Se eliminará el código ${c.codigo} «${c.descripcion}» de ${nombreEmp(c.ruc)}. No aparece en el historial.${refs.length?` Atención: todavía se usa en ${refs.join(" y en ")}; esos valores se mantienen, pero ya no tendrán esta descripción.`:""} Las demás empresas no se ven afectadas. Esta acción no se puede deshacer.`,"Eliminar código");
+  if(!ok)return;
+  const {error}=await sb.from("codigos_plame").delete().eq("id",id);
+  if(error){aviso(mensajeError(error));return}
+  DB.codigos.splice(DB.codigos.indexOf(c),1);aviso(`Se eliminó el código ${c.codigo}`);trasCambioCodigos();
+}
+function verCodigos(ruc){irA("codigos");q("#codEmpresa").value=ruc||"";renderCodigos()}
+/* Sugerencias de códigos en los campos del exportador (catálogo base + propios de la empresa) */
+function actualizarListas(ruc){
+  if(!ENGINE)return;const cat=ENGINE.catalogoBase();
+  const arma=(tipo)=>{const m=new Map(cat[tipo].map(([c,d])=>[c,d]));for(const c of DB.codigos)if(c.ruc===ruc&&c.tipo===tipo&&c.activo)m.set(c.codigo,`${c.descripcion} (propio)`);
+    return [...m].sort((a,b)=>a[0].localeCompare(b[0])).map(([c,d])=>`<option value="${c}" label="${c} · ${escH(d)}">`).join("")};
+  q("#dl-conceptos").innerHTML=arma("concepto");q("#dl-snl").innerHTML=arma("snl");
+}
+/* Lo que cambia en la pantalla al elegir una empresa en el exportador */
+function alCambiarEmpresa(e){
+  const sec=q("#sec-exportar"),dot=q("#empColor"),link=q("#empCodigos");
+  if(!e){sec.style.removeProperty("--emp-color");dot.hidden=true;link.innerHTML="";actualizarListas(null);return}
+  const c=colorDe(e);sec.style.setProperty("--emp-color",c);dot.hidden=false;dot.style.setProperty("--c",c);
+  const n=codigosDe(e.ruc).filter(x=>x.activo).length;
+  link.innerHTML=DB.v2?`<button class="linkbtn" data-ver-codigos="${e.ruc}">${n?`${n} código(s) PDT PLAME propio(s)`:"Agregar códigos PDT PLAME propios"}</button>`:"";
+  actualizarListas(e.ruc);
 }
 
 /* ---------- 9. Configuración ---------- */
@@ -1173,7 +1399,8 @@ function aplicarTema(){const t=prefs().tema||"auto";if(t==="auto")document.docum
 async function copiaSeguridad(){
   try{
     const [emp,cfg,aj,exp]=await Promise.all([traerTodo("empresas","*","ruc"),traerTodo("configuracion_empresa","*","ruc"),traerTodo("ajustes_periodo","*","ruc"),traerTodo("exportaciones","*","id")]);
-    descargar(new Blob([JSON.stringify({generado:new Date().toISOString(),version:APP_VERSION,empresas:emp,configuracion_empresa:cfg,ajustes_periodo:aj,exportaciones:exp},null,2)],{type:"application/json"}),`copia_plame_${new Date().toISOString().slice(0,10)}.json`);
+    const cod=DB.v2?await traerTodo("codigos_plame","*","id"):[];
+    descargar(new Blob([JSON.stringify({generado:new Date().toISOString(),version:APP_VERSION,empresas:emp,configuracion_empresa:cfg,ajustes_periodo:aj,exportaciones:exp,codigos_plame:cod},null,2)],{type:"application/json"}),`copia_inorder_plame_${new Date().toISOString().slice(0,10)}.json`);
     aviso("Copia de seguridad descargada");
   }catch(err){aviso(mensajeError(err))}
 }
@@ -1217,20 +1444,27 @@ async function entrar(session){
   DB.user=session.user;q("#boot").hidden=false;q("#login").hidden=true;
   try{
     const [emp,cfg,aj,exp]=await Promise.all([traerTodo("empresas","*","ruc"),traerTodo("configuracion_empresa","ruc,ajustes","ruc"),traerTodo("ajustes_periodo","ruc,periodo,correcciones,recibos","ruc"),traerTodo("exportaciones","*","id")]);
+    /* Códigos propios (versión 2). Si la actualización de la base de datos aún no se
+       ejecutó, la página sigue funcionando como la versión 1 y muestra un aviso. */
+    try{DB.codigos.splice(0,DB.codigos.length,...await traerTodo("codigos_plame","*","id"));DB.v2=true}
+    catch(err){if(/does not exist|schema cache|Could not find the table/i.test(String(err&&err.message)))DB.v2=false;else throw err}
+    if(DB.v2&&emp.length&&!("color" in emp[0]))DB.v2=false;
     DB.empresas.splice(0,DB.empresas.length,...emp.map(empDeFila));
     DB.exportaciones=exp;
     const saved={ruc:prefs().ruc,settingsBy:{},over:{},rh:{}};
     for(const c of cfg){saved.settingsBy[c.ruc]=c.ajustes;snap.cfg[c.ruc]=JSON.stringify(c.ajustes)}
     for(const a of aj){const k=`${a.ruc}-${a.periodo}`;if(a.correcciones!=null)saved.over[k]=a.correcciones;if(a.recibos!=null)saved.rh[k]=a.recibos;snap.per[k]=JSON.stringify({o:a.correcciones??null,r:a.recibos??null})}
-    if(!ENGINE)ENGINE=startEngine({empresas:DB.empresas,saved,onSave:S=>{setPref("ruc",S.ruc);programarGuardado(S)},onNewEmpresa:altaDesdeExcel,onExport:registrarExportacion});
+    if(!ENGINE)ENGINE=startEngine({empresas:DB.empresas,codigos:DB.codigos,saved,onSave:S=>{setPref("ruc",S.ruc);programarGuardado(S)},onNewEmpresa:altaDesdeExcel,onExport:registrarExportacion,onEmpresa:alCambiarEmpresa});
   }catch(err){
     DB.user=null;await sb.auth.signOut().catch(()=>{});
     mostrarLogin("Ingresaste, pero no se pudo leer la base de datos: "+mensajeError(err));return;
   }
   q("#userEmail").textContent=DB.user.email;q("#cfgEmail").textContent=DB.user.email;
   q("#cfgUltimo").textContent=fechaHora(DB.user.last_sign_in_at);q("#cfgDb").textContent=new URL(SUPABASE_URL).host;
+  q("#bannerV2").hidden=DB.v2;
   q("#boot").hidden=true;q("#app").hidden=false;
-  renderPanel();renderEmpresas();renderFiltrosHistorial();renderHistorial();
+  renderPanel();renderEmpresas();renderFiltrosHistorial();renderHistorial();renderFiltrosCodigos();renderCodigos();
+  ENGINE.empresasCambiaron();
   irA(location.hash.slice(1)||"panel");
   ultimaActividad=Date.now();
 }
@@ -1266,6 +1500,11 @@ function enlazarEventos(){
     const ed=e.target.closest("[data-emp-del]");if(ed){eliminarEmpresa(ed.dataset.empDel);return}
     const he=e.target.closest("[data-hist-edit]");if(he){abrirFormHist(+he.dataset.histEdit);return}
     const hd=e.target.closest("[data-hist-del]");if(hd){eliminarHist(+hd.dataset.histDel);return}
+    const vc=e.target.closest("[data-ver-codigos]");if(vc){verCodigos(vc.dataset.verCodigos);return}
+    const ce=e.target.closest("[data-cod-edit]");if(ce){abrirFormCodigo(+ce.dataset.codEdit);return}
+    const ct=e.target.closest("[data-cod-toggle]");if(ct){cambiarEstadoCodigo(+ct.dataset.codToggle);return}
+    const cd=e.target.closest("[data-cod-del]");if(cd){eliminarCodigo(+cd.dataset.codDel);return}
+    const sw=e.target.closest("[data-swatch]");if(sw){elegirColor(sw.dataset.swatch);return}
   });
   q("#logoutBtn").addEventListener("click",()=>cerrarSesion());
   q("#cfgLogout").addEventListener("click",()=>cerrarSesion());
@@ -1279,6 +1518,15 @@ function enlazarEventos(){
   q("#empBuscar").addEventListener("input",renderEmpresas);q("#empFiltro").addEventListener("change",renderEmpresas);
   q("#formEmpresa").addEventListener("submit",guardarEmpresa);
   q("#feRuc").addEventListener("input",()=>{empConfirmarRuc=false;q("#feAviso").hidden=true;q("#feGuardar").textContent="Guardar empresa"});
+  q("#feColor").addEventListener("input",e=>elegirColor(e.target.value));
+  q("#feNombre").addEventListener("input",()=>elegirColor(q("#feColor").value));
+  /* códigos PDT PLAME */
+  q("#codNuevo").addEventListener("click",()=>abrirFormCodigo(null,q("#codEmpresa").value));
+  q("#codBuscar").addEventListener("input",renderCodigos);
+  ["#codEmpresa","#codTipo","#codEstado"].forEach(s=>q(s).addEventListener("change",renderCodigos));
+  q("#formCodigo").addEventListener("submit",guardarCodigo);
+  ["#fcTipo","#fcEmpresa"].forEach(s=>q(s).addEventListener("change",ayudaCodigo));
+  q("#fcCodigo").addEventListener("input",e=>{e.target.value=e.target.value.replace(/\D/g,"");ayudaCodigo()});
   /* historial */
   q("#fhMes").innerHTML=MESES_UI.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("");
   q("#histNuevo").addEventListener("click",()=>abrirFormHist(null));
