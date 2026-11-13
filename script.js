@@ -20,7 +20,7 @@
    NUNCA pongas aquí la clave secreta (sb_secret_... o "service_role"). */
 const SUPABASE_URL="https://pkqnondrjqvesgnghvbh.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_ourAFgoDG3Z8U96ms-fTGg_AL0Zx4U2";
-const APP_VERSION="2.0.0";
+const APP_VERSION="3.0.0";
 
 /* ---------- 2. Utilidades generales ---------- */
 const MESES_UI=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Setiembre","Octubre","Noviembre","Diciembre"];
@@ -190,6 +190,34 @@ const ALL_COLMAP_H=REGLA_BRUTO_VAC.map(x=>x.h);
 const BTK="20608947559";
 const MESES=["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SETIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
 
+/* ---------- Tabla 22 del PDT PLAME (SUNAT): 262 conceptos de ingresos, tributos y descuentos ----------
+   Fuente: «Tabla informativa de ingresos, tributos y descuentos – PDT Planilla Electrónica PLAME».
+   Se usa como catálogo de referencia, para sugerir códigos y para reconocer por su nombre las
+   columnas nuevas de la planilla. */
+const T22=[["0101","ALIMENTACIÓN PRINCIPAL EN DINERO"],["0102","ALIMENTACIÓN PRINCIPAL EN ESPECIE"],["0103","COMISIONES O DESTAJO"],["0104","COMISIONES EVENTUALES A TRABAJADORES"],["0105","TRABAJO EN SOBRETIEMPO (HORAS EXTRAS) 25%"],["0106","TRABAJO EN SOBRETIEMPO (HORAS EXTRAS) 35%"],["0107","TRABAJO EN DÍA FERIADO O DÍA DE DESCANSO"],["0108","INCREMENTO SNP 3.3 %"],["0109","INCREMENTO POR AFILIACIÓN A AFP 10.23%"],["0110","INCREMENTO POR AFILIACIÓN A AFP 3.00%"],["0111","PREMIOS POR VENTAS"],["0112","PRESTACIONES ALIMENTARIAS - SUMINISTROS DIRECTOS"],["0113","PRESTACIONES ALIMENTARIAS - SUMINISTROS INDIRECTOS"],["0114","VACACIONES TRUNCAS"],["0115","REMUNERACIÓN DÍA DE DESCANSO Y FERIADOS (INCLUIDA LA DEL 1° DE MAYO)"],["0116","REMUNERACIÓN EN ESPECIE"],["0117","COMPENSACIÓN VACACIONAL"],["0118","REMUNERACIÓN VACACIONAL"],["0119","REMUNERACIONES DEVENGADAS"],["0120","SUBVENCIÓN ECONÓMICA MENSUAL (SÓLO PRACTICANTE SENATI)"],["0121","REMUNERACIÓN O JORNAL BÁSICO"],["0122","REMUNERACIÓN PERMANENTE"],["0123","REMUNERACIÓN DE LOS SOCIOS DE COOPERATIVAS"],["0124","REMUNERACIÓN POR LA HORA DE PERMISO POR LACTANCIA"],["0125","REMUNERACIÓN INTEGRAL ANUAL – CUOTA"],["0126","INGRESOS DEL CONDUCTOR DE LA MICROEMPRESA – SIS"],["0127","INGRESOS DEL CONDUCTOR DE LA MICROEMPRESA – SEGURO REGULAR"],["0128","REMUNERACIÓN QUE EXCEDE EL VALOR DE MERCADO (DIVIDENDOS)"],["0201","ASIGNACIÓN FAMILIAR"],["0202","ASIGNACIÓN O BONIFICACIÓN POR EDUCACIÓN"],["0203","ASIGNACIÓN POR CUMPLEAÑOS"],["0204","ASIGNACIÓN POR MATRIMONIO"],["0205","ASIGNACIÓN POR NACIMIENTO DE HIJOS"],["0206","ASIGNACIÓN POR FALLECIMIENTO DE FAMILIARES"],["0207","ASIGNACIÓN POR OTROS MOTIVOS PERSONALES"],["0208","ASIGNACIÓN POR FESTIVIDAD"],["0209","ASIGNACIÓN PROVISIONAL POR DEMANDA DE TRABAJADOR DESPEDIDO"],["0210","ASIGNACIÓN VACACIONAL"],["0211","ASIGNACIÓN POR ESCOLARIDAD 30 JORNALES BÁSICOS/AÑO"],["0212","ASIGNACIONES OTORGADAS POR ÚNICA VEZ CON MOTIVO DE CIERTAS CONTINGENCIAS"],["0213","ASIGNACIONES OTORGADAS REGULARMENTE"],["0214","ASIGNACIÓN POR FALLECIMIENTO 1 UIT"],["0301","BONIFICACIÓN POR 25 Y 30 AÑOS DE SERVICIOS"],["0302","BONIFICACIÓN POR CIERRE DE PLIEGO"],["0303","BONIFICACIÓN POR PRODUCCIÓN, ALTURA, TURNO, ETC"],["0304","BONIFICACIÓN POR RIESGO DE CAJA"],["0305","BONIFICACIONES POR TIEMPO DE SERVICIOS"],["0306","BONIFICACIONES REGULARES"],["0307","BONIFICACIONES CAFAE"],["0308","COMPENSACIÓN POR TRABAJOS EN DÍAS DE DESCANSO Y EN FERIADOS"],["0309","BONIFICACIÓN POR TURNO NOCTURNO 20% JORNAL BÁSICO"],["0310","BONIFICACIÓN CONTACTO DIRECTO CON AGUA 20% JORNAL BÁSICO"],["0311","BONIFICACIÓN UNIFICADA DE CONSTRUCCIÓN"],["0312","BONIFICACIÓN EXTRAORDINARIA TEMPORAL – LEY 29351"],["0313","Bonificación Extraordinaria Temporal Proporcional – Ley 29351"],["0314","BONIFICACIÓN ESPECIAL POR TRABAJADOR AGRARIO LEY 31110 – BETA"],["0401","Gratificaciones de fiestas patrias y navidad"],["0402","Otras gratificaciones ordinarias"],["0403","Gratificaciones extraordinarias"],["0404","Aguinaldos de julio y diciembre"],["0405","Gratificaciones proporcionales"],["0406","Gratificaciones de Fiestas"],["0407","Gratificaciones proporcionales – Ley 29351"],["0408","Gratificaciones Fiestas Patrias y Navidad Trabajador Pesquero – Ley 30334"],["0409","Gratificaciones Proporcionales/Trunca Trabajador Pesquero – Ley 30334"],["0410","Gratificación Forma parte Remuner. Excede Valor de Mercado (Dividendo)"],["0501","Indemnización por despido injustificado u hostilidad"],["0502","Indemnización por muerte o incapacidad"],["0503","Indemnización por resolución de contrato sujeto a modalidad"],["0504","Indemnización por vacaciones no gozadas"],["0505","Indemnización por retención indebida de CTS"],["0506","Indemnización por no reincorporar a un trabajador cesado en un procedimiento de cese colectivo"],["0507","Indemnización por realizar horas extras impuestas por el empleador"],["0601","SISTEMA PRIVADO DE PENSIONES COMISIÓN (AFP) PORCENTUAL"],["0602","CONAFOVICER"],["0603","CONTRIBUCIÓN SOLIDARIA PARA LA ASISTENCIA PREVISIONAL"],["0604","ESSALUD \"+ VIDA SEGURO DE ACCIDENTES\""],["0605","RENTA QUINTA CATEGORÍA - RETENCIONES"],["0606","PRIMA DE SEGURO AFP"],["0607","SISTEMA NACIONAL DE PENSIONES – DL 19990"],["0608","SISTEMA PRIVADO DE PENSIONES - APORTACIÓN OBLIGATORIA"],["0609","SISTEMA PRIVADO DE PENSIONES - APORTACIÓN VOLUNTARIA"],["0610","ESSALUD SEGURO REGULAR PENSIONISTA"],["0611","OTROS APORTACIONES DEL TRABAJADOR/PENSIONISTA"],["0612","SISTEMA NACIONAL DE PENSIONES \"ASEGURA TU PENSIÓN\""],["0613","RÉGIMEN PENSIONARIO DECRETO LEY 20530"],["0614","RÉGIMEN DEL SERV.DIPLOMÁTICO DE LA REPÚB D.LEG 894"],["0615","RÉGIMEN DE PENSIONES MILITAR-POLICIAL"],["0616","APORTE MENSUAL AL FCJMMS – LEY 29741"],["0617","CUOTA FRACCIONAMIENTO – FONDO CJMMS – LEY 29741"],["0618","RENTA CUARTA CATEGORÍA RETENCIONES – CAS"],["0619","SNP TRABAJADOR INDEPENDIENTE – LEY 29903"],["0620","REP TRABAJADOR PESQUERO LEY 30003 – RETENCIÓN"],["0621","RENTA QUINTA CATEGORÍA REGULARIZACIÓN EJERCICIO ANTERIOR"],["0701","Adelanto"],["0702","Cuota sindical"],["0703","Descuento autorizado u ordenado por mandato judicial"],["0704","Tardanzas"],["0705","Inasistencias"],["0706","Otros descuentos no deducibles de la base imponible"],["0707","Otros descuentos deducibles de la base imponible"],["0801","SISTEMA PRIVADO DE PENSIONES - APORTACIÓN VOLUNTARIA"],["0802","FONDO DE DERECHOS SOCIALES DEL ARTISTA"],["0803","PÓLIZA DE SEGURO – D. LEG. N° 688"],["0804","ESSALUD (SEGURO REGULAR, CBSSP, AGRARIO/ ACUICULTOR Y CAS)"],["0805","Pensiones Seguro Complementario de Trabajo de Riesgo"],["0806","EsSalud Seguro Complementario de Trabajo de Riesgo"],["0807","SENATI"],["0808","IMPUESTO EXTRAORDINARIO DE SOLIDARIDAD"],["0809","OTRAS APORTACIONES DE CARGO DEL EMPLEADOR"],["0810","EPS SEGURO COMPLEMENTARIO DE TRABAJO DE RIESGO"],["0811","SEGURO INTEGRAL DE SALUD- SIS"],["0812","REP. TRABAJADOR PESQUERO LEY 30003 – EMPLEADOR"],["0813","ONP SEGURO COMPLEMENTARIO DE TRABAJO DE RIESGO"],["0814","COMPAÑÍA SEGURO – SEGURO COMPLEMENTARIO DE TRABAJO DE RIESGO"],["0815","ESSALUD + VIDA"],["0901","Bienes de la propia empresa otorgados para el consumo del trabajador"],["0902","Bono de productividad"],["0903","Canasta de navidad o similares"],["0904","Compensación por tiempo de servicios – CTS"],["0905","Gastos de representación (movilidad, vestuario, viáticos y similares) - libre disponibilidad"],["0906","Incentivo por cese del trabajador"],["0907","Licencia con goce de haber"],["0908","Movilidad de libre disposición"],["0909","Movilidad supeditada a asistencia y que cubre sólo el traslado"],["0910","Participación en las utilidades - pagadas antes de la declaración anual del impuesto a la renta"],["0911","Participación en las utilidades - pagadas después de la declaración anual del impuesto a la renta"],["0912","Pensiones de Jubilación o Cesantía, Montepío o Invalidez"],["0913","Recargo al consumo"],["0914","Refrigerio que no es alimentación principal"],["0915","Subsidios por maternidad"],["0916","Subsidios de incapacidad por enfermedad"],["0917","Condiciones de trabajo"],["0918","Impuesto a la renta de quinta categoría asumido"],["0919","SNP asumido"],["0920","SPP asumido"],["0921","Pensiones de Jubilación o Cesantía, Montepío o Invalidez Pendiente por Liquidar"],["0922","Sumas o bienes que no son de libre disposición"],["0923","Ingresos de cuarta categoría que son considerados de quinta categoría"],["0924","Ingresos cuarta-quinta sin relación de dependencia"],["0925","Ingreso del pescador y procesador artesanal independiente - Base de cálculo aporte EsSalud - Ley N° 27177"],["0926","Transferencia Directa al Expescador – Ley 30003"],["0927","Bonificación Prima Textil"],["0928","Devolución Retención Exceso de Imp. Renta 5ta. Categoría"],["0929","Otras Asig., Bonif. que forman parte Remun. y Excede Valor de Mercado (Dividendo)"],["0930","Remuneración que Excede el Valor de Mercado (Dividendo) de Periodos Anteriores"],["2001","Remuneración"],["2002","Salarios obreros"],["2003","Bonificación personal – Quinquenio"],["2004","Bonificación familiar"],["2005","Bonificación diferencial"],["2006","Aguinaldos"],["2007","Remuneración Vacacional"],["2008","Asignación por años de servicios"],["2009","Bonificación por escolaridad"],["2010","Compensación por tiempo de servicios"],["2011","Alimentación - CAFAE"],["2012","Movilidad – CAFAE"],["2013","Racionamiento – CAFAE"],["2014","Incentivos laborales – CAFAE"],["2015","Bono jurisdiccional/ bono fiscal"],["2016","Gastos operativos de magistrados y fiscales"],["2017","Asignación por servicio exterior"],["2018","Bonificación consular"],["2019","Asignación especial para docentes universitarios"],["2020","Homologación de docentes universitarios"],["2021","Asignación especial por labor pedagógica efectiva"],["2022","Asignación extraordinaria por trabajo asistencial"],["2023","Servicios extraordinarios PNP"],["2024","Asignaciones FFAA y PNP"],["2025","Combustible FFAA y PNP"],["2026","OTROS INGRESOS REMUNERATIVOS PERSONAL ADMINISTRATIVO"],["2027","OTROS INGRESOS NO REMUNERATIVOS PERSONAL ADMINISTRATIVO"],["2028","OTROS INGRESOS REMUNERATIVOS MAGISTRADOS"],["2029","OTROS INGRESOS NO REMUNERATIVOS MAGISTRADOS"],["2030","OTROS INGRESOS REMUNERATIVOS DOCENTES UNIVERSITARIOS"],["2031","OTROS INGRESOS NO REMUNERATIVOS DOCENTES UNIVERSITARIOS"],["2032","OTROS INGRESOS REMUNERATIVOS PROFESORADO"],["2033","OTROS INGRESOS NO REMUNERATIVOS PROFESORADO"],["2034","OTROS INGRESOS REMUNERATIVOS PROFESIONALES DE LA SALUD"],["2035","OTROS INGRESOS NO REMUNERATIVOS PROFESIONALES DE LA SALUD"],["2036","OTROS INGRESOS REMUNERATIVOS FFAA Y PNP"],["2037","OTROS INGRESOS NO REMUNERATIVOS FFAA Y PNP"],["2038","Asignación Especial – D.U. 126-2001"],["2039","Ingresos del D. Leg. 1057 – CAS"],["2040","REMUNERACIÓN POR DÍAS CON RELACIÓN LABORAL EN EL PERÍODO DEL CAS"],["2041","AGUINALDOS DE JULIO Y DICIEMBRE – LEY 29351"],["2042","BONIFICACIÓN ESPECIAL A SERV. PUB. DU 037-94"],["2043","REMUNERACIÓN VACACIONAL D.LEG 1057 – CAS"],["2044","AGUINALDO JULIO Y DICIEMBRE D.LEG 1057 – CAS"],["2045","LICENCIA CON GOCE DE HABER D.LEG 1057 – CAS"],["2046","VALORIZACIÓN PRINCIPAL - LEY 30057"],["2047","VALORIZACIÓN AJUSTADA - LEY 30057"],["2048","VALORIZACIÓN PRIORIZADA - LEY 30057"],["2049","ENTREGA ECONÓMICA POR VACACIONES - LEY 30057"],["2050","ENTREGA ECONÓMICA POR VACACIONES TRUNCAS - LEY 30057"],["2051","AGUINALDOS POR FIESTAS PATRIAS Y NAVIDAD- LEY 30057 Y LEY 30334"],["2052","AGUINALDOS TRUNCOS POR FIESTAS PATRIAS Y NAVIDAD- LEY 30057 Y LEY 30334"],["2053","AGUINALDOS PROPORCIONALES POR FIESTAS PATRIAS Y NAVIDAD- LEY 30057 Y LEY 30334"],["2054","INDEMNIZ POR DESTITUCIÓN NULA O INJUSTIFICADA - LEY 30057"],["2055","REMUNERACIÓN INTEGRAL MENSUAL - LEY 29944"],["2056","ASIGNACIÓN POR DIRECTOR DE UNIDAD DE GESTIÓN EDUCATIVA LOCAL - LEY 29944"],["2057","ASIGNACIÓN POR DIRECTOR DE GESTIÓN PEDAGÓGICA - LEY 29944"],["2058","ASIGNACIÓN POR ESPECIALISTA EN EDUCACIÓN - LEY 29944"],["2059","ASIGNACIÓN POR ESPECIALISTA EN INNOVACIÓN E INVESTIGACIÓN - LEY 29944"],["2060","ASIGNACIÓN POR DIRECTOR DE INSTITUCIÓN EDUCATIVA - LEY 29944"],["2061","ASIGNACIÓN POR SUB DIRECTOR DE INSTITUCIÓN EDUCATIVA - LEY 29944"],["2062","ASIGNACIÓN POR CARGOS JERÁRQUICOS DE INSTITUCIÓN EDUCATIVA - LEY 29944"],["2063","ASIGNACIÓN POR SERVICIO EN INSTITUCIÓN UNIDOCENTE, MULTIGRADO O BILINGÚE - LEY 29944"],["2064","ASIGNACIÓN POR TRABAJO EN ÁMBITO RURAL O DE FRONTERA - LEY 29944"],["2065","ASIGNACIÓN POR ASESORÍA. FORMACIÓN, CAPACITACIÓN Y/O ACOMPAÑAMIENTO - LEY 29944"],["2066","ASIGNACIÓN POR TIEMPO DE SERVICIOS - LEY 29944"],["2067","ASIGNACIÓN ESPECIAL A PROFESORES DEL VRAEM - Ley 29944"],["2068","INCENTIVO POR EXCELENCIA PROFESIONAL Y DESEMPEÑO DESTACADO - LEY 29944"],["2069","INCENTIVO POR ESTUDIOS DE POSTGRADO - LEY 29944"],["2070","ASIGNACIÓN DIFERENCIADA POR MAESTRÍA Y DOCTORADO - LEY 29944"],["2071","SUBSIDIO POR LUTO Y SEPELIO - LEY 29944"],["2072","COMPENSACIÓN EXTRAORDINARIA TRANSITORIA – LEY 29944"],["2073","DIFERENCIAL SUBSIDIO PAGAGO POR LA ENTIDAD PÚBLICA - D.LEG. 1057-CAS"],["2074","VALORIZACIÓN PRINCIPAL - DEC.LEGISL 1153"],["2075","BONIF POR PUESTO DE RESPONS JEFAT DE DPTO O SERVICIO -DL 1153"],["2076","BONIF POR PUESTO DE RESPONS JEFAT EN ESTABLEC DE SALUD I3, I4, MICRORREDES O REDES -DL 1153"],["2077","BONIF POR PUESTO ESPEC O DE DEDIC EXCLUS EN SERV DE SALUD PÚBLICA - DL 1153"],["2078","BONIF POR PUESTO ESPECIFICO - DL 1153"],["2079","BONIF POR PUESTO EN SERV DE SALUD PUBLICA-DL 1153"],["2080","DESCANSO VACACIONAL -- DL 1153"],["2081","DESCANSO VACACIONAL PROPORC -- DL 1153"],["2082","VAL PRIORIZ ZONA ALEJADA DE FRONTERA - DL 1153"],["2083","VAL PRIORIZ ZONA DE EMERGENCIA - DL 1153"],["2084","VAL PRIORIZ ATENCIÓN PRIMARIA DE SALUD - DL 1153"],["2085","VAL PRIORIZ ATENCIÓN ESPECIALIZADA - DL 1153"],["2086","VAL PRIORIZ ATENCIÓN EN SERV CRÍTICOS - DL 1153"],["2087","VAL PRIORIZ ATENCIÓN ESPEC DE SOPORTE - DL 1153"],["2088","SERVICIOS DE GUARDIA"],["2089","SERVV COMPLEMENTARIO EN SALUD - DL 1153"],["2090","ENTREGA ECON POR 25 AÑOS DE SERVICIO - DL 1153"],["2091","ENTREGA ECON POR 30 AÑOS DE SERVICIO - DL 1153"],["2092","ENTREGA ECON POR LUTO Y SEPELIO - DL 1153"],["2093","ASIGN POR CUMPLIM DE METAS INST, INDIC DESEMP - DL 1153"],["2094","GASTOS OPERATIVOS DE MAGISTRADOS Y FISCALES NO CONSTITUYE CONDICIÓN DE TRABAJO"],["2095","MONTO ÚNICO CONSOLIDADO (MUC) DU 038-2019"],["2096","ASIGNACIÓN POR CUMPLIR 25 AÑOS DE SERVICIOS"],["2097","ASIGNACIÓN POR CUMPLIR 30 AÑOS DE SERV"],["2098","ASIGNACIÓN POR LUTO Y SEPELIO DU 038-2019"],["2099","BET FIJO IMPONIBLE"],["2100","BET FIJO NO IMPONIBLE"],["2101","BET VARIABLE BONIFICACIÓN FAMILIAR"],["2102","BET VARIABLE BONIFICACIÓN DIFERENCIAL PERMANENTE"],["2103","BET VARIABLE BONIFICACIÓN DIFERENCIAL TEMPORAL"],["2104","BET VARIABLE CENTROS DE PRODUC Y SIMILARES"],["2105","BET VARIABLE OTROS DETERMIN POR LA DGGFRH"],["2106","COMPENSACIÓN POR VACACIONES TRUNCAS DU 38-2019"],["2107","SUBSIDIO POR GASTOS DE SEPELIO"],["2108","MUC Y BET AFECTO A CARGAS SOCIALES NOTIFICADO EN RESOLUCIÓN DIRECTORAL"],["2109","MUC Y BET NO AFECTO A CARGAS SOCIALES"],["2110","ASIGNACIÓN POR DESEMPEÑO EN PUESTOS DE GESTIÓN PEDAGÓGICA"],["2111","ASIG POR DESEMPEÑO EN PUESTO DE DIRECTOR GRAL (EESP)"],["2112","BONIF POR INSTIT EDUC UNIDOCENTE, MULTIGRADO O BILINGÜE"],["2113","BONIF. POR PRESTAR SERVICIO EN ÁMBITO RURAL O FRONTERA"],["2114","BONIFICACIÓN POR PALMAS MAGISTERIALES"],["2115","PREMIO ANUAL POR RESULTADOS DESTACADOS"],["2116","BONO DE INCENTIVO AL DESEMPEÑO ESCOLAR"]];
+const T22_MAP=new Map(T22);
+const GRUPOS_T22=[["01","Ingresos – remuneraciones"],["02","Ingresos – asignaciones"],["03","Ingresos – bonificaciones"],["04","Ingresos – gratificaciones y aguinaldos"],["05","Ingresos – indemnizaciones"],["06","Tributos y aportes del trabajador"],["07","Descuentos al trabajador"],["08","Aportes del empleador"],["09","Conceptos varios"],["20","Sector público"],["21","Sector público"]];
+const grupoT22=c=>{const g=GRUPOS_T22.find(([p])=>String(c).startsWith(p));return g?g[1]:"Otros"};
+/* Clasificador por nombre: compara las palabras del título de la columna con los nombres de la
+   Tabla 22 (sector privado). Solo asigna un código cuando la coincidencia es clara y única. */
+const STOP_T22=new Set("DE DEL LA LAS EL LOS Y O U A AL EN POR PARA CON SIN SU SUS QUE E N° NO ETC LEY DL".split(" "));
+function tokensT22(s){return String(s??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9Ñ ]/g," ").split(/\s+/)
+  .filter(w=>w&&!STOP_T22.has(w)&&!/^\d+$/.test(w)).map(w=>{if(w.length>4)w=w.replace(/(ES|S)$/,"");if(w.length>5)w=w.replace(/[AO]$/,"");return w})}
+const T22_TOK=T22.filter(([c])=>/^0[1-9]/.test(c)).map(([c,n])=>[c,n,new Set(tokensT22(n))]);
+function porCatalogo(h){
+  const H=[...new Set(tokensT22(h))];if(!H.length)return null;
+  let best=null,empate=false;
+  for(const [c,n,C] of T22_TOK){
+    const m=H.filter(w=>C.has(w)).length;if(!m)continue;
+    const ok=H.length===1?(C.size<=2&&H[0].length>=8&&T22_TOK.filter(x=>x[2].has(H[0])).length===1):((m===H.length||(m>=3&&m/H.length>=0.75))&&m/C.size>=0.5);
+    if(!ok)continue;
+    const sc=[m,-C.size];
+    if(!best||sc[0]>best.sc[0]||(sc[0]===best.sc[0]&&sc[1]>best.sc[1])){best={c,n,sc};empate=false}
+    else if(sc[0]===best.sc[0]&&sc[1]===best.sc[1]&&c!==best.c)empate=true;
+  }
+  return best&&!empate?{code:best.c,label:best.n}:null;
+}
+
 /* ---------- default settings ---------- */
 const DEFAULT_CONCEPTS=[
  {h:"SUELDO COMPUTABLE",code:"0121",label:"Remuneración o jornal básico"},
@@ -216,10 +244,10 @@ const DEFAULT_CONCEPTS=[
  {h:"PRIMA DE SEGUROS (1.37%)",code:"0606",label:"SPP – prima de seguro"},
  {h:"APORTE OBLIGATORIO (10%)",code:"0608",label:"SPP – aportación obligatoria"},
  {h:"ONP",code:"0607",label:"Sistema Nacional de Pensiones D.L. 19990"},
- {h:"EPS",code:"",label:"Definir si hay descuento EPS al trabajador"},
+ {h:"EPS",code:"",label:"Definir si hay descuento EPS u otros al trabajador (por ejemplo 0706)"},
  {h:"SIS",code:"0811",label:"Seguro Integral de Salud – SIS (empleador)"},
  {h:"ESSALUD",code:"0804",label:"EsSalud seguro regular – trabajador (empleador)"},
- {h:"EPS 2.25%",code:"",label:"Definir (crédito EPS)"},
+ {h:"EPS 2.25%",code:"0804",label:"EPS 2.25% · se suma a EsSalud (0804)"},
  {h:"VIDA LEY",code:"0803",label:"Póliza de seguro D. Leg. 688"}
 ];
 const DEFAULT_SETTINGS={
@@ -248,6 +276,8 @@ function useCompany(ruc){
   S.settings=S.settingsBy[ruc];
   S.settings=Object.assign(structuredClone(DEFAULT_SETTINGS),S.settings);S.settingsBy[ruc]=S.settings;
   for(const c of DEFAULT_CONCEPTS) if(!(c.h in S.settings.concepts)) S.settings.concepts[c.h]=c.code;
+  /* Versión 3: el EPS 2.25% del empleador se declara junto con EsSalud en el 0804 */
+  if((S.settings.cv||0)<3){if(!S.settings.concepts["EPS 2.25%"])S.settings.concepts["EPS 2.25%"]="0804";S.settings.cv=3}
   if(!S.settings.jornadaManual&&EMPRESA_CONFIG[ruc])S.settings.jornada=structuredClone(EMPRESA_CONFIG[ruc].jornada);
 }
 if(S.ruc)useCompany(S.ruc);
@@ -304,15 +334,15 @@ const FIELDS={
   dni:["DNI","DNI / CE","DNI/CE","N° DOCUMENTO","NRO. DOCUMENTO","NRO DOCUMENTO","NUMERO DE DOCUMENTO","N° DE DOCUMENTO","DOC. IDENTIDAD","DOCUMENTO DE IDENTIDAD","DOCUMENTO"],
   alta:["FECHA DE ALTA SUNAT","FECHA DE ALTA","FECHA DE INGRESO","F. DE INGRESO","FECHA INGRESO"],
   baja:["FECHA DE BAJA SUNAT","FECHA DE BAJA","FECHA DE CESE","F. DE SALIDA","FECHA DE SALIDA","FECHA CESE"],
-  modalidad:["MODALIDAD DE PAGO","MODALIDAD","TIPO DE PAGO"],susp:["SUSPENSION DE 4TA"],
+  modalidad:["MODALIDAD DE PAGO","MODALIDAD","TIPO DE PAGO"],tipoContrato:["TIPO DE CONTRATO","TIPO CONTRATO"],susp:["SUSPENSION DE 4TA"],
   pension:["AFP / ONP","AFP/ONP","SISTEMA PENSIONARIO","REGIMEN PENSIONARIO","AFP"],estatus:["ESTATUS","ESTADO"],
   sueldo:["SUELDO SEGUN CONTRATO","SUELDO BASICO","REMUNERACION BASICA","SUELDO PACTADO","SUELDO"],
   lab:["DIAS LABORADOS","DIAS TRABAJADOS","DIAS LAB"],faltas:["DIAS DE FALTAS CON DESCUENTO","DIAS DE FALTAS","FALTAS"],
   lic:["LICENCIAS / DESCANSO MEDICO","DESCANSO MEDICO","DIAS DE DESCANSO MEDICO","LICENCIAS"],
   vac:["DIAS DE VACACIONES GOZADAS","DIAS DE VACACIONES","VACACIONES GOZADAS"],
-  vini:["INICIO DE VACACIONES","FECHA INICIO VACACIONES"],vfin:["FIN DE VACACIONES","FECHA FIN VACACIONES"],
+  vini:["INICIO DE VACACIONES","FECHA INICIO VACACIONES","FECHA DE INICIO DE VACACIONES","FECHA INICIO DE VACACIONES"],vfin:["FIN DE VACACIONES","FECHA FIN VACACIONES","FECHA DE FIN DE VACACIONES","FECHA FIN DE VACACIONES"],
   otros:["OTROS DIAS NO LABORADOS","DIAS NO LABORADOS"],
-  rhMonto:["RECIBOS POR HONORARIOS"],rh4ta:["RENTA 4TA CATEGORIA"]
+  rhMonto:["RECIBOS POR HONORARIOS","RH / RM","RH/RM"],rh4ta:["RENTA 4TA CATEGORIA"]
 };
 const isDocHdr=h=>/^(DNI|N° ?(DE )?DOCUMENTO|NRO\.? ?DOCUMENTO|NUMERO DE DOCUMENTO|DOC\. IDENTIDAD|DOCUMENTO( DE IDENTIDAD)?$)/.test(h);
 const isNameHdr=h=>/NOMBRE|APELLIDO|TRABAJADOR|COLABORADOR/.test(h);
@@ -330,6 +360,7 @@ function findCol(hdr,keys){
   for(const k of keys){const i=hdr.findIndex(h=>h&&h.startsWith(k));if(i>=0)return i}
   return -1;
 }
+function modalidadPorContrato(v){const t=norm(v);if(/HONORARIO|RXH|\bR ?H\b|LOCACION/.test(t))return "Recibo por Honorarios";if(/ARRENDAMIENTO|ALQUILER/.test(t))return "Arrendamiento";if(/REGALIA/.test(t))return "Regalías";return "Planilla"}
 function parseSheet(ws){
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
   let hi=-1;
@@ -338,14 +369,14 @@ function parseSheet(ws){
   const hdrRaw=(aoa[hi]||[]).map(x=>String(x??"").replace(/\s+/g," ").trim());const hdr=hdrRaw.map(norm);const rg=XLSX.utils.decode_range(ws["!ref"]||"A1");
   const col={};for(const k in FIELDS)col[k]=findCol(hdr,FIELDS[k]);
   const ccol={};for(const c of DEFAULT_CONCEPTS)ccol[c.h]=findCol(hdr,[c.h]);
-  for(const h of ALL_COLMAP_H){const j=hdr.findIndex(x=>x===h||(x&&x.startsWith(h+" ")&&!/PACTADO|CONTRATO/.test(x)));if(j>=0)ccol[h]=j}
+  for(const h of ALL_COLMAP_H){const j=hdr.findIndex(x=>x===h||(x&&x.startsWith(h)&&/^[\s\/(-]/.test(x.slice(h.length))&&!/PACTADO|CONTRATO|SEGUN/.test(x)));if(j>=0)ccol[h]=j}
   const extras=[];{const used=new Set(Object.values(ccol));
     let a=findCol(hdr,["SUELDO COMPUTABLE"]);
     if(a<0){const idx=[...Object.values(ccol).filter(x=>x>=0),...hdr.map((h,j)=>h&&AUTO_RULES.some(([re])=>re.test(h))?j:-1).filter(x=>x>=0)];a=idx.length?Math.min(...idx)-1:-1}
     let b=findCol(hdr,["COSTO EMPRESA","COSTO TOTAL","TOTAL COSTO"]);if(b<0)b=hdr.length;
     const hasComp=findCol(hdr,["SUELDO COMPUTABLE"])>=0;
     const fixed=new Set(Object.entries(col).filter(([k,x])=>x>=0&&!(k==="sueldo"&&!hasComp)).map(([,x])=>x));
-    if(a>=-1&&b>a)for(let j=a+1;j<b;j++){if(fixed.has(j))continue;const h=hdr[j];if(!h||used.has(j)||/^(TOTAL|NETO|SUELDO NETO|COSTO|RECIBOS POR HONORARIOS|RENTA 4TA|DIAS|FECHA|CUENTA|BANCO|NRO|N° |CODIGO|PROVISION|% DE|SUELDO SEGUN|SUELDO PACTADO|EDAD|CARGO|PUESTO|AREA|CUSPP|CUPS|TELEFONO|HORAS (?!EXTRA))/.test(h)||ccol[h]!==undefined)continue;ccol[h]=j;extras.push(h)}}
+    if(a>=-1&&b>a)for(let j=a+1;j<b;j++){if(fixed.has(j))continue;const h=hdr[j];if(!h||used.has(j)||/^(TOTAL|NETO|SUELDO NETO|COSTO|RECIBOS POR HONORARIOS|RENTA 4TA|DIAS|FECHA|CUENTA|BANCO|NRO|N° |CODIGO|PROVISION|% DE|SUELDO SEGUN|SUELDO PACTADO|EDAD|CARGO|PUESTO|AREA|CUSPP|CUPS|TELEFONO|HORAS (?!EXT))/.test(h)||/PACTADO|SEGUN CONTRATO|^DESCARGO|INGRESOS BRUTOS|^% /.test(h)||ccol[h]!==undefined)continue;ccol[h]=j;extras.push(h)}}
   for(const h of columnasPropias()){if(ccol[h]!==undefined)continue;const j=hdr.findIndex(x=>x===h);if(j>=0)ccol[h]=j}
   const rows=[];
   for(let i=hi+1;i<aoa.length;i++){
@@ -356,7 +387,7 @@ function parseSheet(ws){
     const notes=[],cm={};
     for(let j=0;j<Math.max(hdr.length,r.length);j++){const cell=ws[XLSX.utils.encode_cell({r:rg.s.r+i,c:rg.s.c+j})];
       if(cell&&cell.c&&cell.c.length){const t=cleanNote(cell.c.map(x=>x.t||"").join("\n"));if(!t)continue;notes.push({h:hdrRaw[j]||XLSX.utils.encode_col(rg.s.c+j),t});for(const k of ["vac","faltas","lic","alta","baja"])if(col[k]===j)cm[k]=t}}
-    rows.push({row:i+1,cod:g("cod"),tipoDoc:norm(g("tipoDoc")),nombre:String(name).replace(/\s+/g," ").trim(),dniRaw:dni,modalidad:col.modalidad>=0?String(g("modalidad")??"").trim():"Planilla",
+    rows.push({row:i+1,cod:g("cod"),tipoDoc:norm(g("tipoDoc")),nombre:String(name).replace(/\s+/g," ").trim(),dniRaw:dni,modalidad:col.modalidad>=0?String(g("modalidad")??"").trim():modalidadPorContrato(g("tipoContrato")),
       susp:norm(g("susp")),pension:String(g("pension")??"").trim(),estatus:String(g("estatus")??"").trim(),sueldo:num(g("sueldo")),
       alta:parseDate(g("alta")),baja:parseDate(g("baja")),lab:num(g("lab")),faltas:num(g("faltas")),lic:num(g("lic")),vac:num(g("vac")),
       vini:parseDate(g("vini")),vfin:parseDate(g("vfin")),otros:num(g("otros")),hasOtros:col.otros>=0,hasLab:col.lab>=0,rhMonto:num(g("rhMonto")),rh4ta:num(g("rh4ta")),amounts,notes,cm});
@@ -469,14 +500,15 @@ const AUTO_RULES=[
  [/REFRIGERIO/,"0914","Refrigerio que no es alimentación principal"],
  [/CANASTA|NAVIDE/,"0903","Canasta de Navidad o similares"],
  [/INCENTIVO.*CESE/,"0906","Incentivo por cese del trabajador"],
+ [/BONIFICACION(ES)? (DE |POR )?(PRODUCTIVIDAD|PRODUCCION)/,"0303","Bonificación por producción, altura, turno, etc."],
  [/BONO.*PRODUCTIVIDAD/,"0902","Bono de productividad"],
  [/UTILIDADES/,"0910","Participación en las utilidades"],
  [/VENTA DE VACACIONES|COMPENSACION VACACIONAL/,"0117","Compensación vacacional"],
  [/VACACIONES TRUNCAS/,"0114","Vacaciones truncas"],
  [/REMUNERACION VACACIONAL|DESCANSO VACACIONAL/,"0118","Remuneración vacacional"],
  [/ASIGNACION FAMILIAR/,"0201","Asignación familiar"],
- [/HORAS? EXTRAS?.*25/,"0105","Sobretiempo 25%"],
- [/HORAS? EXTRAS?.*35/,"0106","Sobretiempo 35%"],
+ [/HORAS? EXT\w*.*25/,"0105","Sobretiempo 25%"],
+ [/HORAS? EXT\w*.*35/,"0106","Sobretiempo 35%"],
  [/FERIADO/,"0107","Trabajo en día feriado o de descanso"],
  [/^(?!INTERESES).*\bCTS\b|TIEMPO DE SERVICIOS/,"0904","Compensación por tiempo de servicios"],
  [/GRATIFICACION/,"0406","Gratificación – Ley 29351"],
@@ -487,7 +519,9 @@ const AUTO_RULES=[
  [/INASISTENCIA/,"0705","Inasistencias"],
  [/ADELANTO|PRESTAMO/,"0701","Adelanto"],
  [/CUOTA SINDICAL/,"0702","Cuota sindical"],
- [/JUDICIAL/,"0703","Descuento por mandato judicial"],
+ [/JUDICIAL|RETENCION(ES)? (DE |POR )?ALIMENTOS|PENSION(ES)? (DE )?ALIMENTOS/,"0703","Descuento por mandato judicial"],
+ [/^OTROS DESCUENTOS/,"0706","Otros descuentos no deducibles de la base imponible"],
+ [/^EPS\b.*(2[.,]25|EMPLEADOR)|CREDITO EPS/,"0804","EPS 2.25% · se suma a EsSalud (0804)"],
  [/ESSALUD ?(\+|MAS) ?VIDA/,"0604","EsSalud + Vida"],
  [/VIDA LEY|SEGURO DE VIDA/,"0803","Póliza de seguro D. Leg. 688"],
  [/RENTA (DE )?5TA|QUINTA/,"0605","Renta de quinta categoría"],
@@ -508,6 +542,7 @@ function codeInfo(h){
   if(m){const c=(m[1]||m[2]).padStart(4,"0");return {code:c,src:"titulo"}}
   if(h in S.settings.concepts){const code=S.settings.concepts[h]||"";const p=code&&(INIT.codigos||[]).find(c=>c.ruc===S.ruc&&c.activo&&c.tipo==="concepto"&&c.codigo===code);return p?{code,src:"config",label:p.descripcion+" (código propio)"}:{code,src:"config"}}
   for(const [re,c,l] of AUTO_RULES)if(re.test(h))return {code:c,src:"auto",label:l};
+  const t=porCatalogo(h);if(t)return {code:t.code,src:"tabla22",label:t.label};
   return {code:"",src:""};
 }
 const codeFor=h=>codeInfo(h).code;
@@ -515,7 +550,7 @@ function allConcepts(){const cm=colMap(),cmh=new Set(cm.map(x=>x.h));return DEFA
 /* Catálogo base (para todas las empresas) y descripción de un código según la empresa actual */
 const SNL_BASE=[["05","Licencia sin goce de haber"],["07","Falta no justificada"],["20","Enfermedad o accidente (primeros 20 días)"],["21","Incapacidad temporal (subsidio)"],["23","Descanso vacacional"],["24","Cargo cívico / SMO"],["27","Licencia con goce de haber"]];
 let _catalogo=null;
-function catalogoBase(){if(_catalogo)return _catalogo;const m=new Map();for(const c of DEFAULT_CONCEPTS)if(c.code&&!m.has(c.code))m.set(c.code,c.label);for(const [,c,l] of AUTO_RULES)if(!m.has(c))m.set(c,l);
+function catalogoBase(){if(_catalogo)return _catalogo;const m=new Map(T22);for(const c of DEFAULT_CONCEPTS)if(c.code&&!m.has(c.code))m.set(c.code,c.label);for(const [,c,l] of AUTO_RULES)if(!m.has(c))m.set(c,l);
   return _catalogo={concepto:[...m].sort((a,b)=>a[0].localeCompare(b[0])),snl:SNL_BASE.slice()}}
 function descCodigo(tipo,code,h){const p=(INIT.codigos||[]).find(c=>c.ruc===S.ruc&&c.tipo===tipo&&c.codigo===code);if(p)return p.descripcion;const b=catalogoBase()[tipo].find(x=>x[0]===code);return b?b[1]:(h||"")}
 const LIC_BASE=[["20","20 Enfermedad (primeros 20 días)"],["21","21 Incapacidad temporal (subsidio)"],["24","24 Cargo cívico / SMO"],["27","27 Licencia con goce"],["05","05 Licencia sin goce"]];
@@ -583,7 +618,7 @@ function compute(){
     mins=Math.max(0,mins);
     let hOrdMin=o.hOrd!=null?Math.round(o.hOrd*60):mins;
     // sobretiempo
-    const he25=r.amounts["HORAS EXTRAS AL 25%"]||0,he35=r.amounts["HORAS EXTRAS AL 35%"]||0;
+    let he25=0,he35=0;for(const h in r.amounts){const v=r.amounts[h];if(!v)continue;const c=codeFor(h);if(c==="0105")he25+=v;else if(c==="0106")he35+=v}
     let heEst=0;
     if((he25||he35)&&r.sueldo>0){const hh=r.sueldo/30/8;heEst=he25/(hh*1.25)+he35/(hh*1.35)}
     const heMin=o.he!=null?Math.round(o.he*60):Math.round(heEst*60);
@@ -839,7 +874,7 @@ function renderArch(C,files){
     <button class="btn ghost sm" data-copy="${ext}"${files[ext].length?"":" disabled"}>Copiar</button></header>
     ${files[ext].length?`<pre>${esc(files[ext].join("\n"))}</pre>`:`<pre class="empty">Sin registros para este periodo; no se incluye en el ZIP.</pre>`}
   </article>`).join("")}</div>
-  <p class="note">Formato: campos separados por «|», montos con punto decimal y 2 decimales, fechas dd/mm/aaaa, texto en mayúsculas, codificación ANSI y fin de línea CRLF. Se envían todos los conceptos de la planilla: ingresos, descuentos, renta de 5ta, AFP (0601/0606/0608), ONP (0607), SIS (0811) y EsSalud (0804).</p>`;
+  <p class="note">Formato: campos separados por «|», montos con punto decimal y 2 decimales, fechas dd/mm/aaaa, texto en mayúsculas, codificación ANSI y fin de línea CRLF. Se envían todos los conceptos de la planilla: ingresos, descuentos, renta de 5ta, AFP (0601/0606/0608), ONP (0607), SIS (0811) y EsSalud (0804, que incluye el EPS 2.25% cuando la planilla lo trae). Las columnas nuevas se reconocen por su nombre con la Tabla 22; si un nombre no es claro, se avisa arriba para que elijas el código.</p>`;
   v._files=files;
 }
 
@@ -849,7 +884,7 @@ function renderConf(C){
   v.innerHTML=`<div class="grid2">
   <section class="panel"><h3>Columnas del Excel → concepto PLAME (tabla 22)</h3>
     <div class="scroll"><table><thead><tr><th>Columna</th><th>Código</th><th>Concepto</th></tr></thead><tbody>
-    ${allConcepts().map(c=>`<tr><td>${esc(c.h)}${c.extra?' <span class="chip warn">nueva</span>':""}${c.regla?' <span class="chip ok">regla de la empresa</span>':""}${c.propio?' <span class="chip ok">código propio de la empresa</span>':""}${(()=>{const x=colMap().find(y=>y.replaces===c.h);return x&&S.sheets.some(sh=>sh.rows.some(r=>x.h in r.amounts))?` <span class="chip info">reemplazada por ${esc(x.h)}</span>`:""})()}${present.has(c.h)?' <span class="chip info">con montos</span>':""}</td><td>${(()=>{const ci=codeInfo(c.h);return `<input list="dl-conceptos" data-cc="${esc(c.h)}" value="${esc(ci.code)}" style="width:4.5em;text-align:left" placeholder="—" aria-label="Código ${esc(c.h)}"${ci.src==="titulo"||ci.src==="empresa"||ci.src==="propio"?" disabled":""}>${ci.src==="titulo"?' <span class="chip ok">del título</span>':ci.src==="propio"?' <span class="chip ok">código propio</span>':ci.src==="auto"?' <span class="chip info">por nombre</span>':""}`})()}</td><td style="white-space:normal">${esc(codeInfo(c.h).label||c.label)}</td></tr>`).join("")}
+    ${allConcepts().map(c=>`<tr><td>${esc(c.h)}${c.extra?' <span class="chip warn">nueva</span>':""}${c.regla?' <span class="chip ok">regla de la empresa</span>':""}${c.propio?' <span class="chip ok">código propio de la empresa</span>':""}${(()=>{const x=colMap().find(y=>y.replaces===c.h);return x&&S.sheets.some(sh=>sh.rows.some(r=>x.h in r.amounts))?` <span class="chip info">reemplazada por ${esc(x.h)}</span>`:""})()}${present.has(c.h)?' <span class="chip info">con montos</span>':""}</td><td>${(()=>{const ci=codeInfo(c.h);return `<input list="dl-conceptos" data-cc="${esc(c.h)}" value="${esc(ci.code)}" style="width:4.5em;text-align:left" placeholder="—" aria-label="Código ${esc(c.h)}"${ci.src==="titulo"||ci.src==="empresa"||ci.src==="propio"?" disabled":""}>${ci.src==="titulo"?' <span class="chip ok">del título</span>':ci.src==="propio"?' <span class="chip ok">código propio</span>':ci.src==="auto"?' <span class="chip info">por nombre</span>':ci.src==="tabla22"?' <span class="chip info">Tabla 22</span>':""}`})()}</td><td style="white-space:normal">${esc(codeInfo(c.h).label||c.label)}</td></tr>`).join("")}
     </tbody></table></div>
     <p class="note">Una columna sin código no se exporta y aparece como observación. Para que un concepto no se envíe, deja su código vacío. Para registrar un código que no está en el catálogo o asociar una columna a un código propio de esta empresa, usa <button class="linkbtn" data-ver-codigos="${S.ruc}">Códigos PDT PLAME</button>.</p>
   </section>
@@ -976,6 +1011,7 @@ return {
     renderEmpresa();render();
   },
   catalogoBase,
+  grupoT22,
   normalizar:norm,
   /* Dónde se usa un código fuera del historial (avisos al eliminar) */
   usoCodigo(ruc,tipo,codigo){
@@ -1290,8 +1326,13 @@ function renderCodigos(){
 function renderCatalogoBase(){
   if(!ENGINE)return;const cat=ENGINE.catalogoBase(),t=q("#codBuscar").value.trim().toUpperCase();
   const f=l=>l.filter(([c,d])=>!t||c.includes(t)||d.toUpperCase().includes(t));
-  const tabla=(l)=>l.length?l.map(([c,d])=>`<tr><td class="mono"><b>${c}</b></td><td class="wrap">${escH(d)}</td></tr>`).join(""):`<tr class="empty-row"><td colspan="2">Sin coincidencias.</td></tr>`;
-  q("#codBaseConceptos").innerHTML=tabla(f(cat.concepto));q("#codBaseSnl").innerHTML=tabla(f(cat.snl));
+  const fila=([c,d])=>`<tr><td class="mono"><b>${c}</b></td><td class="wrap">${escH(d)}</td></tr>`;
+  const tabla=(l)=>l.length?l.map(fila).join(""):`<tr class="empty-row"><td colspan="2">Sin coincidencias.</td></tr>`;
+  /* Tabla 22 agrupada por casillas (ingresos, tributos, descuentos, aportes…) */
+  const lc=f(cat.concepto);let html="",g0=null;
+  for(const x of lc){const g=ENGINE.grupoT22(x[0]);if(g!==g0){html+=`<tr class="grp"><th colspan="2">${escH(g)}</th></tr>`;g0=g}html+=fila(x)}
+  q("#codBaseConceptos").innerHTML=lc.length?html:tabla([]);q("#codBaseSnl").innerHTML=tabla(f(cat.snl));
+  q("#codBaseConteo").textContent=`${lc.length} de ${cat.concepto.length} conceptos`;
 }
 let codEditando=null;
 function ayudaCodigo(){

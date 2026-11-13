@@ -284,6 +284,7 @@ input[type=color]{width:46px;height:34px;padding:2px;border:1px solid var(--line
 .cod-help .panel{padding:14px;display:flex;flex-direction:column;gap:8px}
 details.catalogo summary{padding:12px 14px;cursor:pointer;list-style-position:inside}
 details.catalogo[open] summary{border-bottom:1px solid var(--line);margin-bottom:6px}
+tr.grp th{background:var(--accent-soft);color:var(--accent);text-transform:none;letter-spacing:0;font-size:.78rem;position:static}
 
 /* ---------- 13. Adaptación a tablets y celulares ---------- */
 @media (max-width:1100px){
